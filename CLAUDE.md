@@ -75,13 +75,13 @@ Du darfst und sollst `CLAUDE.md` selbst erweitern, wenn du etwas lernst, das kü
 
 ## Build- und Test-Befehle
 
-_Wird ab Iteration 0 von Claude ergänzt._
-
 ```bash
-# C++ (aus dem Repo-Root)
-cmake --preset debug
-cmake --build --preset debug
-ctest --preset debug
+# C++ (aus dem Repo-Root), Build-Ordner: build/<preset>/
+cmake --preset debug            # konfigurieren (Ninja, Debug); "release" analog
+cmake --build --preset debug    # bauen
+./build/debug/core/simcore      # starten, gibt Name + Version aus
+ctest --preset debug            # Tests (ab Iteration 1)
+find core -name '*.[ch]pp' | xargs clang-format -i   # formatieren
 
 # Python
 # (folgt in Iteration 1)
@@ -92,10 +92,12 @@ ctest --preset debug
 
 ## Aktueller Stand
 
-- Iteration: **0 – Repo-Bootstrap** (noch nicht abgeschlossen)
-- Nächste Iteration: 1 – Toolchain und Skelette
-- System des Nutzers: _wird in Iteration 0 eingetragen (OS, Compiler, Versionen)_
+- Iteration: **0 – Repo-Bootstrap ✅ abgeschlossen** (2026-11-18)
+- Nächste Iteration: **1 – Toolchain und Skelette**
+- System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, git 2.56.1, gh 2.87.3 (kein clang++). Details: `docs/setup.md`
+- GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
+- Architekturentscheid: `docs/adr/0001-architecture.md`
 
 ## Learnings
 
-_Hier trägt Claude Stolpersteine und Erkenntnisse ein, kurz und datiert._
+- 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.

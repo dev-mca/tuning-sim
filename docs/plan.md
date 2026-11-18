@@ -224,7 +224,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 
 | # | Iteration | Prio | Neue Disziplin | Status |
 |---|---|---|---|---|
-| 0 | Repo-Bootstrap | P1 | Git/CMake-Grundlagen | ⬜ |
+| 0 | Repo-Bootstrap | P1 | Git/CMake-Grundlagen | ✅ |
 | 1 | Toolchain und Skelette | P1 | Testframeworks | ⬜ |
 | 2 | Python-MVM und Dyno | P1 | Numerik/Physik | ⬜ |
 | 3 | Sound-Spike in C++ | P1 | Audio-DSP | ⬜ |
@@ -245,7 +245,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Ordnerstruktur aus §4 (leere Ordner mit `.gitkeep`).
 - `.gitignore`, `.editorconfig`, `.clang-format`, `README.md`, `THIRD_PARTY_NOTICES.md` (Vorlage).
 - Root-`CMakeLists.txt` + `CMakePresets.json` (debug/release, Ninja), `core/CMakeLists.txt` mit einem minimalen Programm `simcore` (gibt Version aus). Keine Abhängigkeiten.
-- `git init -b main`, erster Commit, GitHub-Repo (privat) anlegen, Push.
+- `git init -b main`, erster Commit, GitHub-Repo anlegen, Push. (Umgesetzt: öffentlich auf Wunsch des Nutzers, github.com/dev-mca/tuning-sim)
 **Abnahme:** `cmake --preset debug && cmake --build --preset debug` läuft (falls Tools vorhanden); Repo auf GitHub sichtbar; CLion lädt das Projekt ohne Fehler.
 
 ### Iteration 1 – Toolchain und Skelette

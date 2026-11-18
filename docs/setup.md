@@ -23,6 +23,7 @@ Ergebnis der Systemprüfung (Iteration 0, 2026-11-18).
 | Clang (clang++) | nicht installiert | optional | `sudo dnf install clang` |
 
 `gh` ist mit dem GitHub-Konto angemeldet, Git-Protokoll SSH.
+Commit-Mail in diesem Repo (lokale git config): GitHub-Noreply-Adresse, weil das Repo öffentlich ist.
 
 ## Bibliotheken
 
