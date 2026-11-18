@@ -226,7 +226,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 |---|---|---|---|---|
 | 0 | Repo-Bootstrap | P1 | Git/CMake-Grundlagen | ✅ |
 | 1 | Toolchain und Skelette | P1 | Testframeworks | ✅ |
-| 2 | Python-MVM und Dyno | P1 | Numerik/Physik | ⬜ |
+| 2 | Python-MVM und Dyno | P1 | Numerik/Physik | ✅ |
 | 3 | Sound-Spike in C++ | P1 | Audio-DSP | ⬜ |
 | 4 | simcore: MVM-Port, Tabellen, WebSocket | P1 | modernes C++ | ⬜ |
 | 5 | UI: Cockpit mit Fake-Daten | P2 | React | ⬜ |
@@ -265,6 +265,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Golden File `shared/golden/i6_30_na_sweep.csv` (mit Einheiten im Kopf).
 - Tests: Interpolation, Einheiten, Grössenordnungen (Spitzenmoment ca. 280–330 Nm, Spitzenleistung ca. 190–230 kW, BMEP ≤ 13,5 bar).
 **Abnahme:** Kurven plausibel, Effekt von Zündung und Lambda sichtbar, Tests grün.
+**Umgesetzt (2026-11-18):** 304 Nm / 196 kW / bmep 12,8 bar / EGT ≈ 785 °C. Zündung −5°: −3 % Moment, EGT +25 °C; λ 1,0 statt 0,88: −4 %; ECU-VE −10 % → λ gemessen 0,98. Zusätzlich zum Plan: Nebenaggregate-Moment (T_aux) und Leerlauf-Momentenreserve in der Zündtabelle, damit der Motor frei bei ~765/min / 30 kPa läuft. Hubraum aus Geometrie 2,993 l. 61 Tests. Plots per `python -m tuning_lab.report`.
 
 ### Iteration 3 – Sound-Spike in C++ (`core/spikes/sound_spike`)
 - miniaudio per FetchContent, 48 kHz.
