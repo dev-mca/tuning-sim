@@ -1,0 +1,32 @@
+# --- C++ / CMake build output ---
+build/
+out/
+cmake-build-*/
+CMakeUserPresets.json
+compile_commands.json
+
+# --- IDEs ---
+.idea/
+.vscode/
+*.swp
+*~
+
+# --- Python ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --- Node / UI ---
+node_modules/
+dist/
+
+# --- Audio: WAV exports are generated, except impulse responses ---
+*.wav
+!shared/impulses/*.wav
+
+# --- OS ---
+.DS_Store
+Thumbs.db
