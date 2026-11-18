@@ -4,6 +4,7 @@ BasedOnStyle: LLVM
 Standard: c++20
 IndentWidth: 4
 AccessModifierOffset: -4
+BreakTemplateDeclarations: Yes
 ColumnLimit: 100
 PointerAlignment: Left
 AllowShortFunctionsOnASingleLine: Inline
