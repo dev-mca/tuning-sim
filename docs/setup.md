@@ -43,6 +43,8 @@ Exakte UI-Versionen stehen in `ui/package-lock.json`.
 | Bibliothek | Version | Lizenz | Quelle | Hinweis |
 |---|---|---|---|---|
 | doctest | 2.5.3 | MIT | github.com/doctest/doctest | Tarball + SHA256, nur Tests (ADR 0002) |
+| nlohmann/json | 3.12.0 | MIT | github.com/nlohmann/json | `json.tar.xz` + SHA256, simcore (Dateien, Protokoll) |
+| IXWebSocket | 12.1.0 | BSD-3-Clause | github.com/machinezone/IXWebSocket | Tarball + SHA256, ohne TLS/zlib (ADR 0004) |
 | miniaudio | 0.11.26 | Public Domain / MIT-0 | github.com/mackron/miniaudio | Tarball + SHA256, eigenes CMake-Target, ohne Decoder/Engine (ADR 0003) |
 
 ### Python (`lab/`, in `lab/.venv`)
