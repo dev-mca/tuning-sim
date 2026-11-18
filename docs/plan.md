@@ -228,7 +228,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 1 | Toolchain und Skelette | P1 | Testframeworks | ✅ |
 | 2 | Python-MVM und Dyno | P1 | Numerik/Physik | ✅ |
 | 3 | Sound-Spike in C++ | P1 | Audio-DSP | ✅ |
-| 4 | simcore: MVM-Port, Tabellen, WebSocket | P1 | modernes C++ | ⬜ |
+| 4 | simcore: MVM-Port, Tabellen, WebSocket | P1 | modernes C++ | ✅ |
 | 5 | UI: Cockpit mit Fake-Daten | P2 | React | ⬜ |
 | 6 | UI ↔ simcore live | P2 | Integration | ⬜ |
 | 7 | Sound an simcore koppeln | P1 | Echtzeit-Threads | ⬜ |
@@ -282,6 +282,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - CLI: `simcore --engine i6_30_na --sweep 1000 7000` gibt CSV aus.
 - WebSocket-Server (ADR zur Bibliothek), Protokoll v1 in `docs/interface.md`, `state` mit 60 Hz, Befehle `setPedal`, `startSweep`, `getTable`, `setTableCells`.
 **Abnahme:** Golden-Test grün; mit `wscat` oder einer kleinen HTML-Testseite sichtbar, dass `state` kommt und Befehle wirken.
+**Umgesetzt (2026-11-18):** Golden-Test exakt (Toleranz 1e-6 statt ±1 %). ADR 0004 (IXWebSocket). Protokoll v1 in `docs/interface.md` mit `setPedal`, `startSweep`, `stopSweep`, `getTable`, `setTableCells`; `hello`, `state` (60 Hz), `dynoProgress`, `dynoResult`, `table`, `ack`, `error`. Eigene SPSC-Queue + Triple Buffer zwischen Netzwerk- und Simulationsthread. Testseite `core/tools/ws_test.html` und automatischer End-to-End-Test (echter WebSocket-Client). Table1D implementiert, aber noch ungenutzt (ab Iteration 8). 67 C++-Tests.
 
 ### Iteration 5 – UI: Cockpit mit Fake-Daten
 - Layout, Designsystem (Farben, Schrift, Heatmap-Skala).

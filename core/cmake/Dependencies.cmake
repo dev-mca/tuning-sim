@@ -16,6 +16,26 @@ if(BUILD_TESTING)
   include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 endif()
 
+# nlohmann/json: JSON for engine/table files and the WebSocket protocol (MIT).
+FetchContent_Declare(nlohmann_json
+  URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+  URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+  SYSTEM
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
+# IXWebSocket: WebSocket server (BSD-3-Clause), see docs/adr/0004-websocket-library.md.
+# Only localhost is used: no TLS, no compression (no OpenSSL/zlib needed).
+set(USE_TLS OFF CACHE BOOL "" FORCE)
+set(USE_ZLIB OFF CACHE BOOL "" FORCE)
+set(IXWEBSOCKET_INSTALL OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(ixwebsocket
+  URL https://github.com/machinezone/IXWebSocket/archive/refs/tags/v12.1.0.tar.gz
+  URL_HASH SHA256=55f3a5d3a1a2c5f19d737c24e6aced28d1200f8f5deb45ecd8e5d46f765b5288
+  SYSTEM
+)
+FetchContent_MakeAvailable(ixwebsocket)
+
 if(SIMCORE_BUILD_SPIKES)
   # miniaudio: audio playback (Public Domain / MIT-0). Single source file; we build it as our
   # own small library instead of using its CMake project (fewer options, no optional codecs).

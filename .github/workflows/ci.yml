@@ -33,8 +33,11 @@ jobs:
       - name: Test
         run: ctest --preset debug
 
+      # Without arguments simcore serves forever; check the CLI modes that terminate instead.
       - name: Run simcore
-        run: ./build/debug/core/simcore
+        run: |
+          ./build/debug/core/simcore --version
+          ./build/debug/core/simcore --sweep 1000 7000 | tail -n 3
 
       # Same clang-format version as on the developer machine (docs/setup.md):
       # different versions format slightly differently.

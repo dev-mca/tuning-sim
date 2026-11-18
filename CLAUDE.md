@@ -79,7 +79,8 @@ Du darfst und sollst `CLAUDE.md` selbst erweitern, wenn du etwas lernst, das kü
 # C++ (aus dem Repo-Root), Build-Ordner: build/<preset>/
 cmake --preset debug            # konfigurieren (Ninja, Debug); "release" analog
 cmake --build --preset debug    # bauen
-./build/debug/core/simcore      # starten, gibt Name + Version aus
+./build/debug/core/simcore      # Server ws://127.0.0.1:47800 (Ctrl+C beendet); Testseite core/tools/ws_test.html
+./build/debug/core/simcore --sweep 1000 7000   # Dyno-Sweep als CSV (Format wie Golden File)
 ctest --preset debug            # Tests (doctest, ADR 0002)
 find core -name '*.[ch]pp' | xargs clang-format -i   # formatieren
 ./build/release/core/spikes/sound_spike/sound_spike             # Sound-Spike live (Tasten: README)
@@ -103,12 +104,13 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 
 ## Aktueller Stand
 
-- Iteration: **3 – Sound-Spike in C++ ✅ abgeschlossen** (2026-11-18)
-- Nächste Iteration: **4 – simcore: MVM-Port, Tabellen, WebSocket**
+- Iteration: **4 – simcore: MVM-Port, Tabellen, WebSocket ✅ abgeschlossen** (2026-11-18)
+- Nächste Iteration: **5 – UI: Cockpit mit Fake-Daten**
 - System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
-- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter)
-- Bereits vorhanden: `simcore_lib` (statische Lib, alle Logik dort), `simcore_warnings`; UI-Startseite mit ersten Design-Tokens (`ui/src/index.css`, `@theme`)
+- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket
+- simcore (`core/src/`): `domain/` (Table1D/2D, Saugrohr, MVM, ECU, Dyno/SweepRun; bitgenau wie lab), `ports/` (Interfaces + Nachrichten), `adapters/` (JSON-Repository, Protokoll-Codec, MessageBus, WebSocket-Server, CSV), `app/` (SimulationService, RealtimeRunner, CLI, main), `concurrency/` (SPSC-Queue, Triple Buffer). Protokoll v1: `docs/interface.md`.
+- UI-Startseite mit ersten Design-Tokens (`ui/src/index.css`, `@theme`)
 - Lab (Referenz für den C++-Port in Iteration 4): MVM, ECU, Dyno in `lab/src/tuning_lab/` (Übersicht in `lab/README.md`); Referenzmotor `shared/engines/i6_30_na.json`, Tabellen `shared/tables/i6_30_na/`, Golden File `shared/golden/i6_30_na_sweep.csv`. Ergebnis Serie: 304 Nm, 196 kW, bmep 12,8 bar, Leerlauf 765/min bei 30 kPa.
 - Sound-Spike `core/spikes/sound_spike/` (README dort): I4/I6/V8 cross/flat, Wellenleiter-Auspuff, miniaudio. `src/acoustic/` + `src/dsp/` sind für den Umzug nach simcore in Iteration 7 gedacht.
 
@@ -124,4 +126,6 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - 2026-11-18: Abhängigkeiten zentral in `core/cmake/Dependencies.cmake` (Tarball + SHA256). miniaudio als eigenes C-Target ohne Decoder/Engine; nur `audio_device.cpp` inkludiert `miniaudio.h`.
 - 2026-11-18: Sound objektiv prüfen statt nur hören: Goertzel-Ordnungsanalyse in `core/spikes/sound_spike/tests/order_analysis.hpp` (Analysedauer = ganze Zahl von Arbeitsspielen, sonst Leckage). Spektrogramme lassen sich mit dem Lab-venv aus den WAVs erzeugen.
 - 2026-11-18: `.clang-format` mit `AccessModifierOffset: -4` (public:/private: am Zeilenanfang).
+- 2026-11-18: C++-Port gibt das Golden File exakt wieder (0 Abweichung bei 6 Dezimalen), weil jede Formel in derselben Gleitkomma-Reihenfolge wie Python steht. Bei Physikänderungen: zuerst lab ändern, Golden neu erzeugen, dann C++ identisch nachziehen.
+- 2026-11-18: Domain-Code kennt kein JSON/Netzwerk: Einheiten-Umrechnung nur in `adapters/table_units` und im Protokoll-Codec. Neue Befehle: Struct in `ports/messages.hpp`, Decoder im Codec, Handler in `SimulationService`, Doku in `docs/interface.md`.
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.

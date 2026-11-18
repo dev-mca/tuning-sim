@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>simcore test page</title>
+<!--
+  Minimal test client for the simcore WebSocket API (docs/interface.md, protocol v1).
+  Start simcore (./build/debug/core/simcore), then open this file in a browser.
+  No build step, no dependencies. The real UI follows in iterations 5 and 6.
+-->
+<style>
+  :root { color-scheme: dark; --bg: #0b0d10; --panel: #14171c; --line: #262a31; --ink: #e6e8eb;
+          --muted: #8a919c; --accent: #ff8a1f; --ok: #3ccf91; --bad: #ff4d2e; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--ink);
+         font: 14px/1.4 system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 12px; } h2 { font-size: 15px; margin: 0 0 8px; color: var(--accent); }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .values { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-family: ui-monospace, monospace; }
+  .values span:nth-child(odd) { color: var(--muted); }
+  label { display: block; margin: 6px 0; color: var(--muted); }
+  input[type=number] { width: 80px; } input, button { font: inherit; }
+  button { background: var(--line); color: var(--ink); border: 1px solid #3a3f47; border-radius: 6px;
+           padding: 4px 10px; cursor: pointer; }
+  #status { font-weight: 600; } .ok { color: var(--ok); } .bad { color: var(--bad); }
+  pre { margin: 0; max-height: 220px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; }
+  td, th { border: 1px solid var(--line); padding: 2px 4px; text-align: right; }
+  th { color: var(--muted); font-weight: normal; }
+  .scroll { overflow: auto; max-height: 320px; }
+</style>
+</head>
+<body>
+<h1>simcore test page <span id="status" class="bad">disconnected</span></h1>
+<div class="grid">
+  <section>
+    <h2>Connection</h2>
+    <label>URL <input id="url" value="ws://127.0.0.1:47800" size="24"></label>
+    <button id="connect">connect</button>
+    <div id="engine" style="margin-top:8px;color:var(--muted)"></div>
+  </section>
+  <section>
+    <h2>State (60 Hz)</h2>
+    <div class="values" id="state"></div>
+  </section>
+  <section>
+    <h2>Pedal</h2>
+    <label>pedal <output id="pedalValue">0.00</output>
+      <input id="pedal" type="range" min="0" max="1" step="0.01" value="0" style="width:100%"></label>
+    <h2 style="margin-top:12px">Dyno sweep</h2>
+    <label>from <input id="from" type="number" value="1000"> to <input id="to" type="number" value="7000">
+      rate <input id="rate" type="number" value="300"> 1/min/s</label>
+    <button id="sweep">start sweep</button> <button id="stop">stop</button>
+    <div id="progress" style="margin-top:6px;color:var(--muted)"></div>
+  </section>
+  <section>
+    <h2>Tables</h2>
+    <label><select id="tableId"></select> <button id="getTable">get table</button></label>
+    <label>set cell x <input id="cellX" type="number" value="0" min="0">
+      y <input id="cellY" type="number" value="0" min="0">
+      value <input id="cellValue" type="number" step="0.1" value="10">
+      <button id="setCell">send</button></label>
+    <div class="scroll" id="table"></div>
+  </section>
+  <section>
+    <h2>Last sweep result</h2>
+    <div class="scroll" id="result"></div>
+  </section>
+  <section>
+    <h2>Messages (except state)</h2>
+    <pre id="log"></pre>
+  </section>
+</div>
+<script>
+"use strict";
+let socket = null;
+let requestCounter = 0;
+const $ = (id) => document.getElementById(id);
+const fmt = (value, digits = 1) => (value === null || value === undefined) ? "–" : Number(value).toFixed(digits);
+
+function log(text) {
+  const line = new Date().toLocaleTimeString() + "  " + text + "\n";
+  $("log").textContent = (line + $("log").textContent).slice(0, 8000);
+}
+
+function send(type, payload = {}) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) { log("not connected"); return; }
+  const message = { v: 1, type, id: String(++requestCounter), payload };
+  socket.send(JSON.stringify(message));
+  log("→ " + JSON.stringify(message));
+}
+
+function showState(p) {
+  const rows = [
+    ["rpm", fmt(p.rpm, 0)], ["pedal", fmt(p.pedal, 2)], ["MAP", fmt(p.map_kPa) + " kPa"],
+    ["lambda", fmt(p.lambda, 3) + " (target " + fmt(p.lambdaTarget, 3) + ")"],
+    ["ignition", fmt(p.ignition_deg) + " °BTDC"], ["torque", fmt(p.torque_Nm) + " Nm"],
+    ["power", fmt(p.power_kW) + " kW"], ["EGT", fmt(p.egt_C, 0) + " °C"],
+    ["airflow", fmt(p.airflow_kg_s * 1000, 1) + " g/s"], ["dyno", p.dynoMode + (p.dynoMode === "sweep" ? " " + fmt(p.sweepProgress * 100, 0) + " %" : "")],
+    ["fuel cut", p.cutActive ? "yes" : "no"], ["t", fmt(p.t_s, 2) + " s"],
+  ];
+  $("state").innerHTML = rows.map(([k, v]) => `<span>${k}</span><span>${v}</span>`).join("");
+}
+
+function showTable(p) {
+  const head = "<tr><th>" + p.yAxis.unit + " \\ " + p.xAxis.unit + "</th>" +
+    p.xAxis.bins.map((b) => `<th>${fmt(b, 0)}</th>`).join("") + "</tr>";
+  const rows = p.values.map((row, y) => `<tr><th>${fmt(p.yAxis.bins[y], 0)}</th>` +
+    row.map((v) => `<td>${fmt(v, 1)}</td>`).join("") + "</tr>").reverse().join("");
+  $("table").innerHTML = `<div>${p.name} [${p.unit}]${p.editable ? "" : " (read-only)"}</div><table>${head}${rows}</table>`;
+}
+
+function showResult(p) {
+  const rows = p.rpm.map((rpm, i) => `<tr><td>${fmt(rpm, 0)}</td><td>${fmt(p.torque_Nm[i])}</td>` +
+    `<td>${fmt(p.power_kW[i])}</td><td>${fmt(p.lambda[i], 3)}</td><td>${fmt(p.egt_C[i], 0)}</td></tr>`).join("");
+  const peakTorque = Math.max(...p.torque_Nm), peakPower = Math.max(...p.power_kW);
+  $("result").innerHTML = `<div>peak ${fmt(peakTorque)} Nm, ${fmt(peakPower)} kW</div>` +
+    `<table><tr><th>rpm</th><th>Nm</th><th>kW</th><th>λ</th><th>EGT °C</th></tr>${rows}</table>`;
+}
+
+function onMessage(event) {
+  const message = JSON.parse(event.data);
+  const p = message.payload;
+  switch (message.type) {
+    case "state": showState(p); return;
+    case "hello":
+      $("engine").textContent = `${p.engine.name} · ${p.engine.cylinders} cyl · simcore ${p.simcore}`;
+      $("tableId").innerHTML = p.tables.map((t) => `<option value="${t.id}">${t.id}</option>`).join("");
+      break;
+    case "table": showTable(p); break;
+    case "dynoProgress": $("progress").textContent = `sweep ${fmt(p.progress * 100, 0)} % at ${fmt(p.rpm, 0)} 1/min`; return;
+    case "dynoResult": showResult(p); $("progress").textContent = "sweep finished"; break;
+  }
+  log("← " + message.type + (message.id ? " #" + message.id : "") +
+      (message.type === "error" ? ": " + p.message : ""));
+}
+
+$("connect").onclick = () => {
+  if (socket) socket.close();
+  socket = new WebSocket($("url").value);
+  socket.onopen = () => { $("status").textContent = "connected"; $("status").className = "ok"; };
+  socket.onclose = () => { $("status").textContent = "disconnected"; $("status").className = "bad"; };
+  socket.onmessage = onMessage;
+};
+$("pedal").oninput = () => { $("pedalValue").textContent = Number($("pedal").value).toFixed(2); send("setPedal", { value: Number($("pedal").value) }); };
+$("sweep").onclick = () => send("startSweep", { rpmFrom: Number($("from").value), rpmTo: Number($("to").value), rate_rpm_s: Number($("rate").value), pedal: 1 });
+$("stop").onclick = () => send("stopSweep");
+$("getTable").onclick = () => send("getTable", { id: $("tableId").value });
+$("setCell").onclick = () => {
+  send("setTableCells", { id: $("tableId").value, cells: [{ x: Number($("cellX").value), y: Number($("cellY").value), value: Number($("cellValue").value) }] });
+  send("getTable", { id: $("tableId").value });
+};
+$("connect").click();
+</script>
+</body>
+</html>
