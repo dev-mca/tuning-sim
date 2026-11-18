@@ -80,25 +80,36 @@ Du darfst und sollst `CLAUDE.md` selbst erweitern, wenn du etwas lernst, das kü
 cmake --preset debug            # konfigurieren (Ninja, Debug); "release" analog
 cmake --build --preset debug    # bauen
 ./build/debug/core/simcore      # starten, gibt Name + Version aus
-ctest --preset debug            # Tests (ab Iteration 1)
+ctest --preset debug            # Tests (doctest, ADR 0002)
 find core -name '*.[ch]pp' | xargs clang-format -i   # formatieren
 
-# Python
-# (folgt in Iteration 1)
+# Python (aus lab/)
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # einmalig
+.venv/bin/pytest                                             # Tests
+.venv/bin/ruff check . && .venv/bin/ruff format .            # Lint + Format
 
-# UI
-# (folgt in Iteration 1)
+# UI (aus ui/)
+npm ci                          # Abhängigkeiten exakt nach package-lock.json
+npm run dev                     # Dev-Server http://localhost:5173
+npm run build                   # Typecheck + Produktions-Build nach dist/
+npm run lint && npm run format  # ESLint + Prettier
 ```
+
+CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` alle drei Teile aus (inkl. Format-Checks). Vor dem Push lokal dieselben Befehle laufen lassen.
 
 ## Aktueller Stand
 
-- Iteration: **0 – Repo-Bootstrap ✅ abgeschlossen** (2026-11-18)
-- Nächste Iteration: **1 – Toolchain und Skelette**
-- System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, git 2.56.1, gh 2.87.3 (kein clang++). Details: `docs/setup.md`
+- Iteration: **1 – Toolchain und Skelette ✅ abgeschlossen** (2026-11-18)
+- Nächste Iteration: **2 – Python-MVM und Dyno**
+- System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
-- Architekturentscheid: `docs/adr/0001-architecture.md`
+- ADRs: 0001 Architektur, 0002 doctest
+- Bereits vorhanden: `simcore_lib` (statische Lib, alle Logik dort), `simcore_warnings`; `tuning_lab.units` (SI-Umrechnungen); UI-Startseite mit ersten Design-Tokens (`ui/src/index.css`, `@theme`)
 
 ## Learnings
 
 - 2026-11-18: CLion nutzt System-CMake und nur das Preset-Profil «debug» (gleicher Build-Ordner wie im Terminal), siehe `docs/setup.md`.
+- 2026-11-18: TypeScript bleibt auf `~6.0.x`, solange typescript-eslint TS 7 nicht unterstützt (Peer-Dependency prüfen, bevor man TS hebt).
+- 2026-11-18: create-vite nutzt standardmässig Oxlint. Wir nutzen ESLint (plan.md), daher Flag `--eslint`.
+- 2026-11-18: In `core/` neue Quelldateien zu `simcore_lib` hinzufügen (nicht zu `simcore`), damit die Tests sie linken können.
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.

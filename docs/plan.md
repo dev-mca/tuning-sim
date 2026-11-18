@@ -225,7 +225,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | # | Iteration | Prio | Neue Disziplin | Status |
 |---|---|---|---|---|
 | 0 | Repo-Bootstrap | P1 | Git/CMake-Grundlagen | ✅ |
-| 1 | Toolchain und Skelette | P1 | Testframeworks | ⬜ |
+| 1 | Toolchain und Skelette | P1 | Testframeworks | ✅ |
 | 2 | Python-MVM und Dyno | P1 | Numerik/Physik | ⬜ |
 | 3 | Sound-Spike in C++ | P1 | Audio-DSP | ⬜ |
 | 4 | simcore: MVM-Port, Tabellen, WebSocket | P1 | modernes C++ | ⬜ |
@@ -255,6 +255,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Build-/Test-Befehle in `CLAUDE.md` eintragen.
 - Optional: GitHub Actions CI für alle drei Teile (nur nach Rückfrage).
 **Abnahme:** `ctest`, `pytest`, `npm run build` und `npm run dev` grün bzw. lauffähig.
+**Umgesetzt (2026-11-18):** doctest 2.5.3 (ADR 0002), `lab/` mit hatchling + ruff + pytest, UI mit Vite 8 / React 19 / TS 6 strict / Tailwind v4 / ESLint `strictTypeChecked` / Prettier. CI per GitHub Actions eingerichtet (vom Nutzer bestätigt). Versionen in `docs/setup.md`.
 
 ### Iteration 2 – Python-MVM und Dyno (Referenzmotor `i6_30_na`)
 - `shared/engines/i6_30_na.json` (2,998 l, Bohrung 84 mm, Hub 90 mm, ε ≈ 10,2, Zündfolge 1-5-3-6-2-4, Drehzahlgrenze 7000/min; Annahmen markiert).

@@ -1,14 +1,8 @@
+#include "simcore/version.hpp"
+
 #include <iostream>
-#include <string_view>
-
-namespace {
-
-constexpr std::string_view kProgramName = "simcore";
-constexpr std::string_view kVersion = SIMCORE_VERSION; // injected by CMake from project VERSION
-
-} // namespace
 
 int main() {
-    std::cout << kProgramName << ' ' << kVersion << '\n';
+    std::cout << simcore::versionBanner() << '\n';
     return 0;
 }

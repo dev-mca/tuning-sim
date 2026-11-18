@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling>=1.33,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tuning-lab"
+version = "0.1.0"
+description = "Calculation lab for tuning-sim: reference models, plots and golden files"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = [
+    "numpy>=2.5,<3",
+    "matplotlib>=3.11,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.2,<10",
+    # ruff is pinned exactly: new minor versions may change formatting and lint rules.
+    "ruff==0.17.5",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tuning_lab"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import order)
+    "N",   # pep8-naming
+    "UP",  # pyupgrade (modern syntax)
+    "B",   # flake8-bugbear (likely bugs)
+    "SIM", # flake8-simplify
+    "PT",  # flake8-pytest-style
+    "NPY", # numpy-specific rules
+    "RUF", # ruff-specific rules
+]
+# Physics code uses symbols from docs/research.md; allow non-lowercase names like V_d or T_e.
+ignore = ["N802", "N803", "N806"]
+
+[tool.ruff.format]
+quote-style = "double"
