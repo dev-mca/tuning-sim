@@ -18,6 +18,8 @@ SECONDS_PER_MINUTE = 60.0
 PASCAL_PER_BAR = 1.0e5
 WATT_PER_PS = 735.5  # metric horsepower (research.md §0)
 KELVIN_OFFSET = 273.15
+PASCAL_PER_KILOPASCAL = 1.0e3
+WATT_PER_KILOWATT = 1.0e3
 
 
 def rpm_to_rad_s[T: (float, FloatArray)](speed_rpm: T) -> T:
@@ -40,11 +42,31 @@ def pa_to_bar[T: (float, FloatArray)](pressure_pa: T) -> T:
     return pressure_pa / PASCAL_PER_BAR
 
 
+def pa_to_kpa[T: (float, FloatArray)](pressure_pa: T) -> T:
+    """Pressure [Pa] to [kPa]."""
+    return pressure_pa / PASCAL_PER_KILOPASCAL
+
+
+def kpa_to_pa[T: (float, FloatArray)](pressure_kpa: T) -> T:
+    """Pressure [kPa] to [Pa]."""
+    return pressure_kpa * PASCAL_PER_KILOPASCAL
+
+
 def w_to_ps[T: (float, FloatArray)](power_w: T) -> T:
     """Power [W] to metric horsepower [PS]."""
     return power_w / WATT_PER_PS
 
 
+def w_to_kw[T: (float, FloatArray)](power_w: T) -> T:
+    """Power [W] to [kW]."""
+    return power_w / WATT_PER_KILOWATT
+
+
 def celsius_to_kelvin[T: (float, FloatArray)](temperature_c: T) -> T:
     """Temperature [°C] to [K]."""
     return temperature_c + KELVIN_OFFSET
+
+
+def kelvin_to_celsius[T: (float, FloatArray)](temperature_k: T) -> T:
+    """Temperature [K] to [°C]."""
+    return temperature_k - KELVIN_OFFSET

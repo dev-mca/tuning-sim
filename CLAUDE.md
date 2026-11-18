@@ -87,6 +87,8 @@ find core -name '*.[ch]pp' | xargs clang-format -i   # formatieren
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # einmalig
 .venv/bin/pytest                                             # Tests
 .venv/bin/ruff check . && .venv/bin/ruff format .            # Lint + Format
+.venv/bin/python -m tuning_lab.report                        # Dyno-Plots -> lab/output/
+.venv/bin/python -m tuning_lab.golden                        # Golden-File neu erzeugen
 
 # UI (aus ui/)
 npm ci                          # Abhängigkeiten exakt nach package-lock.json
@@ -99,12 +101,13 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 
 ## Aktueller Stand
 
-- Iteration: **1 – Toolchain und Skelette ✅ abgeschlossen** (2026-11-18)
-- Nächste Iteration: **2 – Python-MVM und Dyno**
+- Iteration: **2 – Python-MVM und Dyno ✅ abgeschlossen** (2026-11-18)
+- Nächste Iteration: **3 – Sound-Spike in C++**
 - System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
 - ADRs: 0001 Architektur, 0002 doctest
-- Bereits vorhanden: `simcore_lib` (statische Lib, alle Logik dort), `simcore_warnings`; `tuning_lab.units` (SI-Umrechnungen); UI-Startseite mit ersten Design-Tokens (`ui/src/index.css`, `@theme`)
+- Bereits vorhanden: `simcore_lib` (statische Lib, alle Logik dort), `simcore_warnings`; UI-Startseite mit ersten Design-Tokens (`ui/src/index.css`, `@theme`)
+- Lab (Referenz für den C++-Port in Iteration 4): MVM, ECU, Dyno in `lab/src/tuning_lab/` (Übersicht in `lab/README.md`); Referenzmotor `shared/engines/i6_30_na.json`, Tabellen `shared/tables/i6_30_na/`, Golden File `shared/golden/i6_30_na_sweep.csv`. Ergebnis Serie: 304 Nm, 196 kW, bmep 12,8 bar, Leerlauf 765/min bei 30 kPa.
 
 ## Learnings
 
@@ -112,4 +115,7 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - 2026-11-18: TypeScript bleibt auf `~6.0.x`, solange typescript-eslint TS 7 nicht unterstützt (Peer-Dependency prüfen, bevor man TS hebt).
 - 2026-11-18: create-vite nutzt standardmässig Oxlint. Wir nutzen ESLint (plan.md), daher Flag `--eslint`.
 - 2026-11-18: In `core/` neue Quelldateien zu `simcore_lib` hinzufügen (nicht zu `simcore`), damit die Tests sie linken können.
+- 2026-11-18: Saugrohr ist nahe Vollgas steif (Psi steil bei Pi→1). Lösung: Psi linear für Pi > 0,99 und 10 Teilschritte pro 1 ms. Der C++-Port muss das identisch machen, sonst passt das Golden File nicht.
+- 2026-11-18: Leerlauf braucht Momentenreserve (Zündung ~4°), tiefe VE bei Unterdruck und T_aux; sonst hängt der MAP bei 16 kPa. Ein Bremsprüfstand kann den Motor nicht antreiben (Bremse ≥ 0), Leerlauf daher frei laufend testen.
+- 2026-11-18: Hubraum aus Bohrung/Hub = 2,993 l (plan.md nennt 2,998 l). Kurbelwinkel intern in Grad (`_deg`), sonst SI.
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.
