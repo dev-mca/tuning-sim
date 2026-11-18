@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens (first draft; the full design system follows in iteration 5).
+ * Tailwind v4 turns every --color-* token into utilities such as bg-panel or text-accent.
+ */
+@theme {
+  --color-canvas: #0b0d10;
+  --color-panel: #14171c;
+  --color-line: #262a31;
+  --color-ink: #e6e8eb;
+  --color-muted: #8a919c;
+  --color-accent: #ff8a1f;
+  --color-redline: #ff4d2e;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+body {
+  @apply bg-canvas text-ink font-sans antialiased;
+}
