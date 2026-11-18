@@ -227,7 +227,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 0 | Repo-Bootstrap | P1 | Git/CMake-Grundlagen | ✅ |
 | 1 | Toolchain und Skelette | P1 | Testframeworks | ✅ |
 | 2 | Python-MVM und Dyno | P1 | Numerik/Physik | ✅ |
-| 3 | Sound-Spike in C++ | P1 | Audio-DSP | ⬜ |
+| 3 | Sound-Spike in C++ | P1 | Audio-DSP | ✅ |
 | 4 | simcore: MVM-Port, Tabellen, WebSocket | P1 | modernes C++ | ⬜ |
 | 5 | UI: Cockpit mit Fake-Daten | P2 | React | ⬜ |
 | 6 | UI ↔ simcore live | P2 | Integration | ⬜ |
@@ -273,6 +273,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Konsole: Drehzahl ±, Last 0–1, Layout I4 / I6 / V8 crossplane / V8 flatplane, WAV-Export 10 s.
 - ADR zum Sound-Ansatz.
 **Abnahme:** I4, I6, V8 crossplane klar unterscheidbar; glitchfreie Drehzahländerung; WAV-Dateien zum Vergleich.
+**Umgesetzt (2026-11-18):** ADR 0003. Unterscheidbarkeit objektiv per Ordnungsanalyse getestet (I4: 98 % auf Ordnung 2; I6: Ordnung 3 dominiert; V8-Bank flatplane 96 % auf geraden Ordnungen, crossplane nur 60 % → halbe Ordnungen). Glitch-Tests für Hochdrehen, Gas weg und Layoutwechsel (80-ms-Überblendung). V8 mit getrennten Bänken in Stereo. WAVs per `sound_spike --export <dir>` (nicht im Repo, da generiert). Release rendert ~50× Echtzeit. Live-Wiedergabe über das Audiogerät vom Nutzer noch anzuhören.
 
 ### Iteration 4 – simcore: MVM-Port, Tabellen, WebSocket
 - `Table1D/2D`, Motor-MVM, ECU-Grundlogik, Dyno in C++ (domain/), sauber hinter Ports.
