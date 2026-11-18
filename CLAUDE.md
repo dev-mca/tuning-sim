@@ -100,4 +100,5 @@ find core -name '*.[ch]pp' | xargs clang-format -i   # formatieren
 
 ## Learnings
 
+- 2026-11-18: CLion nutzt System-CMake und nur das Preset-Profil «debug» (gleicher Build-Ordner wie im Terminal), siehe `docs/setup.md`.
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.
