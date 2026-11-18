@@ -1,0 +1,69 @@
+{
+  "id": "i6_30_na",
+  "name": "3.0 l inline six, naturally aspirated (reference engine)",
+  "_assumption": "Generic modern 3.0 l NA inline six for learning purposes, not a specific production engine. Geometry from docs/plan.md iteration 2; all other values are estimates calibrated to the plausibility ranges in docs/research.md §10.",
+  "cylinders": 6,
+  "layout": "inline",
+  "bankAngle_deg": 0,
+  "bore_m": 0.084,
+  "stroke_m": 0.090,
+  "_displacement": "Derived from bore and stroke: 6 * pi/4 * 0.084^2 * 0.090 = 2.993 l (plan.md says 2.998 l; geometry wins).",
+  "conrodLength_m": 0.135,
+  "_assumption_conrodLength": "Rod/stroke ratio 1.5, typical for passenger car engines.",
+  "compressionRatio": 10.2,
+  "firingOrder": [1, 5, 3, 6, 2, 4],
+  "firingAngles_deg": [0, 480, 240, 600, 120, 360],
+  "_firingAngles": "Crank angle of each cylinder's firing TDC (index 0 = cylinder 1), evenly spaced by 720/6 = 120 deg (research.md §1.2).",
+  "valveTiming_deg": {
+    "_reference": "Crank angle after the cylinder's own firing TDC, 0..720 deg.",
+    "_assumption": "Typical fixed cam timing without VANOS.",
+    "evo": 130,
+    "evc": 370,
+    "ivo": 350,
+    "ivc": 590
+  },
+  "idle_rpm": 750,
+  "revLimit_rpm": 7000,
+  "revLimitHysteresis_rpm": 100,
+  "inertia_kg_m2": 0.20,
+  "_assumption_inertia": "Crank train plus dual-mass flywheel, research.md §2.11 gives 0.15-0.25 kg m^2.",
+  "intake": {
+    "_assumption": "Manifold volume incl. plenum and runners; throttle body size typical for 3.0 l.",
+    "manifoldVolume_m3": 0.0035,
+    "throttleDiameter_m": 0.070,
+    "throttleClosedAngle_deg": 7.0,
+    "throttleDischargeCoefficient": 0.8,
+    "throttleLeakArea_m2": 1.8e-5
+  },
+  "combustion": {
+    "_assumption": "research.md §2.6/§2.7/§2.10. indicatedEfficiencyBase at MBT and lambda 1; lambda factor is a parabola with its maximum at lambdaOptimum.",
+    "indicatedEfficiencyBase": 0.40,
+    "lambdaOptimum": 0.88,
+    "lambdaCurvature": 2.5,
+    "ignitionCurvature_per_deg2": 5.0e-4,
+    "coolingFraction": 0.28
+  },
+  "friction": {
+    "_assumption": "Form of the Heywood correlation (research.md §2.8), fmep = c0 + c1*(N/1000) + c2*(N/1000)^2, but with lower coefficients for a modern low-friction engine. Calibrated so that bmep and peak power land in research.md §10. [prüfen]",
+    "fmep_c0_kPa": 55.0,
+    "fmep_c1_kPa_per_krpm": 8.0,
+    "fmep_c2_kPa_per_krpm2": 1.2
+  },
+  "accessoryTorque_Nm": 6.0,
+  "_assumption_accessoryTorque": "Alternator, water pump, oil pump drive (T_aux in research.md §2.9), taken as constant.",
+  "exhaust": {
+    "_assumption": "Backpressure grows with the square of the exhaust mass flow: p_exh = p_amb + k * mdot^2, about +15 kPa at 0.2 kg/s.",
+    "backpressureCoefficient_Pa_s2_per_kg2": 375000.0,
+    "manifold": "3-into-1 x2",
+    "primaryLength_m": [0.60, 0.55, 0.50, 0.60, 0.55, 0.50],
+    "primaryDiameter_m": 0.040,
+    "collectorGroups": [[1, 2, 3], [4, 5, 6]]
+  },
+  "tables": {
+    "ve": "tables/i6_30_na/ve.json",
+    "lambdaTarget": "tables/i6_30_na/lambdaTarget.json",
+    "ignition": "tables/i6_30_na/ignition.json",
+    "ignitionMbt": "tables/i6_30_na/ignitionMbt.json"
+  },
+  "_tables": "Paths relative to shared/. ve, lambdaTarget and ignition are the ECU tune; ignitionMbt is a property of the engine model, not of the ECU."
+}
