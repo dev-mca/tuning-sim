@@ -82,6 +82,8 @@ cmake --build --preset debug    # bauen
 ./build/debug/core/simcore      # starten, gibt Name + Version aus
 ctest --preset debug            # Tests (doctest, ADR 0002)
 find core -name '*.[ch]pp' | xargs clang-format -i   # formatieren
+./build/release/core/spikes/sound_spike/sound_spike             # Sound-Spike live (Tasten: README)
+./build/release/core/spikes/sound_spike/sound_spike --export wav # Vergleichs-WAVs, ohne Audiogerät
 
 # Python (aus lab/)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # einmalig
@@ -101,13 +103,14 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 
 ## Aktueller Stand
 
-- Iteration: **2 – Python-MVM und Dyno ✅ abgeschlossen** (2026-11-18)
-- Nächste Iteration: **3 – Sound-Spike in C++**
+- Iteration: **3 – Sound-Spike in C++ ✅ abgeschlossen** (2026-11-18)
+- Nächste Iteration: **4 – simcore: MVM-Port, Tabellen, WebSocket**
 - System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
-- ADRs: 0001 Architektur, 0002 doctest
+- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter)
 - Bereits vorhanden: `simcore_lib` (statische Lib, alle Logik dort), `simcore_warnings`; UI-Startseite mit ersten Design-Tokens (`ui/src/index.css`, `@theme`)
 - Lab (Referenz für den C++-Port in Iteration 4): MVM, ECU, Dyno in `lab/src/tuning_lab/` (Übersicht in `lab/README.md`); Referenzmotor `shared/engines/i6_30_na.json`, Tabellen `shared/tables/i6_30_na/`, Golden File `shared/golden/i6_30_na_sweep.csv`. Ergebnis Serie: 304 Nm, 196 kW, bmep 12,8 bar, Leerlauf 765/min bei 30 kPa.
+- Sound-Spike `core/spikes/sound_spike/` (README dort): I4/I6/V8 cross/flat, Wellenleiter-Auspuff, miniaudio. `src/acoustic/` + `src/dsp/` sind für den Umzug nach simcore in Iteration 7 gedacht.
 
 ## Learnings
 
@@ -118,4 +121,7 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - 2026-11-18: Saugrohr ist nahe Vollgas steif (Psi steil bei Pi→1). Lösung: Psi linear für Pi > 0,99 und 10 Teilschritte pro 1 ms. Der C++-Port muss das identisch machen, sonst passt das Golden File nicht.
 - 2026-11-18: Leerlauf braucht Momentenreserve (Zündung ~4°), tiefe VE bei Unterdruck und T_aux; sonst hängt der MAP bei 16 kPa. Ein Bremsprüfstand kann den Motor nicht antreiben (Bremse ≥ 0), Leerlauf daher frei laufend testen.
 - 2026-11-18: Hubraum aus Bohrung/Hub = 2,993 l (plan.md nennt 2,998 l). Kurbelwinkel intern in Grad (`_deg`), sonst SI.
+- 2026-11-18: Abhängigkeiten zentral in `core/cmake/Dependencies.cmake` (Tarball + SHA256). miniaudio als eigenes C-Target ohne Decoder/Engine; nur `audio_device.cpp` inkludiert `miniaudio.h`.
+- 2026-11-18: Sound objektiv prüfen statt nur hören: Goertzel-Ordnungsanalyse in `core/spikes/sound_spike/tests/order_analysis.hpp` (Analysedauer = ganze Zahl von Arbeitsspielen, sonst Leckage). Spektrogramme lassen sich mit dem Lab-venv aus den WAVs erzeugen.
+- 2026-11-18: `.clang-format` mit `AccessModifierOffset: -4` (public:/private: am Zeilenanfang).
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.

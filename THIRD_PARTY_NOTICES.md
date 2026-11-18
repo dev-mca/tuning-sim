@@ -26,6 +26,14 @@ Copyright (c) Meta Platforms, Inc. and affiliates.
 
 Copyright (c) Tailwind Labs, Inc.
 
+### miniaudio 0.11.26
+- Source: https://github.com/mackron/miniaudio
+- Licence: Public Domain (Unlicense) or MIT No Attribution (MIT-0), at our choice
+- Used in: `core/spikes/sound_spike`, audio output (later simcore)
+- Integration: CMake FetchContent (release tarball + SHA256)
+
+Copyright 2025 David Reid (MIT-0 alternative; no attribution required)
+
 ## Used in tests only
 
 ### doctest 2.5.3

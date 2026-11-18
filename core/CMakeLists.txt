@@ -1,5 +1,10 @@
 # simcore: headless simulation process (see docs/adr/0001-architecture.md)
 
+# Throwaway experiments (docs/plan.md §4). Built by default so that CI keeps them compiling.
+option(SIMCORE_BUILD_SPIKES "Build the experiments in core/spikes" ON)
+
+include(cmake/Dependencies.cmake)
+
 # --- Shared compiler warnings -------------------------------------------------
 # An INTERFACE target carries no code, only usage requirements. Every target that
 # links it gets the same warning flags (similar to a shared parent POM in Maven).
@@ -28,4 +33,9 @@ target_link_libraries(simcore PRIVATE simcore_lib simcore_warnings)
 # --- Tests --------------------------------------------------------------------
 if(BUILD_TESTING)
   add_subdirectory(tests)
+endif()
+
+# --- Spikes -------------------------------------------------------------------
+if(SIMCORE_BUILD_SPIKES)
+  add_subdirectory(spikes)
 endif()

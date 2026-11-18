@@ -38,11 +38,12 @@ Commit-Mail in diesem Repo (lokale git config): GitHub-Noreply-Adresse, weil das
 Ermittelt am 2026-11-18 aus den offiziellen Quellen (GitHub Releases, PyPI, npm-Registry), nicht aus dem Gedächtnis.
 Exakte UI-Versionen stehen in `ui/package-lock.json`.
 
-### C++ (`core/`, per FetchContent)
+### C++ (`core/`, per FetchContent in `core/cmake/Dependencies.cmake`)
 
 | Bibliothek | Version | Lizenz | Quelle | Hinweis |
 |---|---|---|---|---|
 | doctest | 2.5.3 | MIT | github.com/doctest/doctest | Tarball + SHA256, nur Tests (ADR 0002) |
+| miniaudio | 0.11.26 | Public Domain / MIT-0 | github.com/mackron/miniaudio | Tarball + SHA256, eigenes CMake-Target, ohne Decoder/Engine (ADR 0003) |
 
 ### Python (`lab/`, in `lab/.venv`)
 
