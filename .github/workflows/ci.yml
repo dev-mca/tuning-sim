@@ -79,7 +79,7 @@ jobs:
         run: pytest
 
   ui:
-    name: ui (lint, format, build)
+    name: ui (lint, format, test, build)
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -101,6 +101,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build
