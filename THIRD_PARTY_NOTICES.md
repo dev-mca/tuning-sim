@@ -1,7 +1,7 @@
 # Third-Party Notices
 
 This project uses the third-party components listed below. Only permissive licences
-(MIT, BSD, Zlib, Public Domain / MIT-0) are accepted. GPL projects (e.g. rusEFI, Speeduino)
+(MIT, BSD, Zlib, Public Domain / MIT-0; for fonts SIL OFL 1.1) are accepted. GPL projects (e.g. rusEFI, Speeduino)
 are used as a source of concepts only; no code is copied.
 
 Development-only tools that are not shipped with the application (compilers, linters,
@@ -33,6 +33,23 @@ Copyright (c) Tailwind Labs, Inc.
 - Integration: npm
 
 Copyright (c) 2022 Leon Sorokin
+
+### Inter (variable) via @fontsource-variable/inter 5.3.0
+- Source: https://github.com/rsms/inter, packaged by https://github.com/fontsource/font-files
+- Licence: SIL Open Font License 1.1 (fonts may be bundled with software; the fonts themselves
+  must not be sold on their own and keep their licence)
+- Used in: `ui/`, UI text (woff2 files bundled into `ui/dist`)
+- Integration: npm
+
+Copyright (c) 2016 The Inter Project Authors
+
+### JetBrains Mono (variable) via @fontsource-variable/jetbrains-mono 5.3.0
+- Source: https://github.com/JetBrains/JetBrainsMono, packaged by Fontsource
+- Licence: SIL Open Font License 1.1
+- Used in: `ui/`, numbers on gauges, tables and charts (woff2 files bundled into `ui/dist`)
+- Integration: npm
+
+Copyright 2020 The JetBrains Mono Project Authors
 
 ### miniaudio 0.11.26
 - Source: https://github.com/mackron/miniaudio

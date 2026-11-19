@@ -7,8 +7,8 @@ import { SURFACE } from '../theme/palette.ts';
 import { cellRect, fractionalToPixel, type HeatmapLayout } from './heatmapLayout.ts';
 
 const CELL_GAP_PX = 1;
-const VALUE_FONT = '600 11px "JetBrains Mono", ui-monospace, monospace';
-const AXIS_FONT = '10px "JetBrains Mono", ui-monospace, monospace';
+const VALUE_FONT = '600 11px "JetBrains Mono Variable", ui-monospace, monospace';
+const AXIS_FONT = '10px "JetBrains Mono Variable", ui-monospace, monospace';
 const MODIFIED_MARK_PX = 6;
 const CURSOR_RADIUS_PX = 5;
 

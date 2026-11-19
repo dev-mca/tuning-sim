@@ -23,8 +23,8 @@ interface DynoChartProps {
   onHoverRpm: (rpm: number | null) => void;
 }
 
-const AXIS_FONT = '11px "JetBrains Mono", ui-monospace, monospace';
-const LABEL_FONT = '600 11px Inter, ui-sans-serif, system-ui, sans-serif';
+const AXIS_FONT = '11px "JetBrains Mono Variable", ui-monospace, monospace';
+const LABEL_FONT = '600 11px "Inter Variable", ui-sans-serif, system-ui, sans-serif';
 const LINE_WIDTH_PX = 2;
 const CURSOR_POINT_PX = 8;
 

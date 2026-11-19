@@ -54,6 +54,8 @@ export function TableEditor({ table, original }: TableEditorProps) {
   // the ref is current immediately, even for several events within one frame.
   const selectionRef = useRef(selection);
   const [hovered, setHovered] = useState<Cell | null>(null);
+  // Canvas text does not re-render by itself when a web font finishes loading; redraw once then.
+  const [fontsReady, setFontsReady] = useState(false);
 
   const columns = columnCount(table);
   const rows = rowCount(table);
@@ -63,6 +65,18 @@ export function TableEditor({ table, original }: TableEditorProps) {
     selectionRef.current = clampSelection(next(selectionRef.current), columns, rows);
     setSelectionState(selectionRef.current);
   };
+
+  useEffect(() => {
+    let mounted = true;
+    void document.fonts.ready.then(() => {
+      if (mounted) {
+        setFontsReady(true);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -89,7 +103,7 @@ export function TableEditor({ table, original }: TableEditorProps) {
     if (context !== null) {
       drawHeatmap(context, layout, table, original, clampedSelection);
     }
-  });
+  }, [layout, table, original, clampedSelection, fontsReady]);
 
   useAnimationFrame(() => {
     const canvas = cursorRef.current;

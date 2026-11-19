@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* Bundled fonts (OFL-1.1, see THIRD_PARTY_NOTICES.md), so the look does not depend on the system. */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
 
 /*
  * Design tokens of the cockpit (dark motorsport look). Tailwind v4 turns every --color-* token
@@ -21,8 +24,8 @@
   --color-warn: #fab219;
   --color-good: #0ca30c;
 
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
 }
 
 body {
