@@ -96,6 +96,7 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # einmalig
 # UI (aus ui/)
 npm ci                          # Abhängigkeiten exakt nach package-lock.json
 npm run dev                     # Dev-Server http://localhost:5173
+npm test                        # Vitest (Logik, Fake-Quelle, Store)
 npm run build                   # Typecheck + Produktions-Build nach dist/
 npm run lint && npm run format  # ESLint + Prettier
 ```
@@ -104,13 +105,13 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 
 ## Aktueller Stand
 
-- Iteration: **4 – simcore: MVM-Port, Tabellen, WebSocket ✅ abgeschlossen** (2026-11-18)
-- Nächste Iteration: **5 – UI: Cockpit mit Fake-Daten**
+- Iteration: **5 – UI: Cockpit mit Fake-Daten ✅ abgeschlossen** (2026-11-19)
+- Nächste Iteration: **6 – UI ↔ simcore live**
 - System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
-- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket
+- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket, 0005 UI-Zustand/Rendering
 - simcore (`core/src/`): `domain/` (Table1D/2D, Saugrohr, MVM, ECU, Dyno/SweepRun; bitgenau wie lab), `ports/` (Interfaces + Nachrichten), `adapters/` (JSON-Repository, Protokoll-Codec, MessageBus, WebSocket-Server, CSV), `app/` (SimulationService, RealtimeRunner, CLI, main), `concurrency/` (SPSC-Queue, Triple Buffer). Protokoll v1: `docs/interface.md`.
-- UI-Startseite mit ersten Design-Tokens (`ui/src/index.css`, `@theme`)
+- UI-Cockpit (`ui/src/`, Übersicht in `ui/README.md`): Port `sim/SimSource.ts`, `sim/fake/FakeSimSource` (Protokoll v1, Daten aus `shared/`), `state/simStore.ts`, Gauges (SVG), Tabelleneditor (Canvas), Dyno (uPlot). Iteration 6 tauscht in `App.tsx` nur die Quelle.
 - Lab (Referenz für den C++-Port in Iteration 4): MVM, ECU, Dyno in `lab/src/tuning_lab/` (Übersicht in `lab/README.md`); Referenzmotor `shared/engines/i6_30_na.json`, Tabellen `shared/tables/i6_30_na/`, Golden File `shared/golden/i6_30_na_sweep.csv`. Ergebnis Serie: 304 Nm, 196 kW, bmep 12,8 bar, Leerlauf 765/min bei 30 kPa.
 - Sound-Spike `core/spikes/sound_spike/` (README dort): I4/I6/V8 cross/flat, Wellenleiter-Auspuff, miniaudio. `src/acoustic/` + `src/dsp/` sind für den Umzug nach simcore in Iteration 7 gedacht.
 
@@ -128,4 +129,7 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - 2026-11-18: `.clang-format` mit `AccessModifierOffset: -4` (public:/private: am Zeilenanfang).
 - 2026-11-18: C++-Port gibt das Golden File exakt wieder (0 Abweichung bei 6 Dezimalen), weil jede Formel in derselben Gleitkomma-Reihenfolge wie Python steht. Bei Physikänderungen: zuerst lab ändern, Golden neu erzeugen, dann C++ identisch nachziehen.
 - 2026-11-18: Domain-Code kennt kein JSON/Netzwerk: Einheiten-Umrechnung nur in `adapters/table_units` und im Protokoll-Codec. Neue Befehle: Struct in `ports/messages.hpp`, Decoder im Codec, Handler in `SimulationService`, Doku in `docs/interface.md`.
+- 2026-11-19: UI: 60-Hz-Daten nie in React-State, sondern `store.latestState()` per `useAnimationFrame` lesen. Event-Handler, die Tabellen ändern, nutzen `store.editTableWith(...)` und eine Ref für die Auswahl, sonst arbeiten schnelle Tastenfolgen mit einem veralteten Stand (stale closure).
+- 2026-11-19: Vitest-Fake-Timer: Ein `setTimeout(0)`, das in einem anderen Timer geplant wird, läuft erst nach `advanceTimersByTime(1)`.
+- 2026-11-19: UI-Screenshots ohne Chrome: `firefox --headless --screenshot` wartet auf `load`. Für spätere Zustände eine temporäre Seite mit iframe und einem verzögerten Bild nutzen (nicht committen).
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.

@@ -35,7 +35,7 @@ Commit-Mail in diesem Repo (lokale git config): GitHub-Noreply-Adresse, weil das
 
 ## Bibliotheken
 
-Ermittelt am 2026-11-18 aus den offiziellen Quellen (GitHub Releases, PyPI, npm-Registry), nicht aus dem Gedächtnis.
+Ermittelt am 2026-11-18 (UI-Ergänzungen 2026-11-19) aus den offiziellen Quellen (GitHub Releases, PyPI, npm-Registry), nicht aus dem Gedächtnis.
 Exakte UI-Versionen stehen in `ui/package-lock.json`.
 
 ### C++ (`core/`, per FetchContent in `core/cmake/Dependencies.cmake`)
@@ -66,6 +66,8 @@ Exakte UI-Versionen stehen in `ui/package-lock.json`.
 | @vitejs/plugin-react | 6.3.0 | MIT | |
 | typescript | 6.0.3 (`~6.0.3`) | Apache-2.0 | **Nicht** 7.x: typescript-eslint 8.73 unterstützt nur TS < 6.1 |
 | tailwindcss, @tailwindcss/vite | 4.3.5 | MIT | Tailwind v4: Konfiguration per `@theme` in CSS statt `tailwind.config.js` |
+| uplot | 1.6.32 | MIT | Laufzeit, Dyno-Graphen (ab Iteration 5) |
+| vitest | 5.1.1 | MIT | Tests (`npm test`), ab Iteration 5. `npm install -D vitest` scheiterte mit npm 10.9.9 («Cannot read properties of null (reading 'edgesOut')»); Workaround: Eintrag per `npm pkg set` und danach `npm install` |
 | eslint | 10.15.0 | MIT | statt Oxlint (create-vite-Standard), wie in plan.md festgelegt |
 | typescript-eslint | 8.73.0 | MIT | `strictTypeChecked` + `stylisticTypeChecked` |
 | prettier | 3.10.1 | MIT | |

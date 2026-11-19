@@ -229,7 +229,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 2 | Python-MVM und Dyno | P1 | Numerik/Physik | ✅ |
 | 3 | Sound-Spike in C++ | P1 | Audio-DSP | ✅ |
 | 4 | simcore: MVM-Port, Tabellen, WebSocket | P1 | modernes C++ | ✅ |
-| 5 | UI: Cockpit mit Fake-Daten | P2 | React | ⬜ |
+| 5 | UI: Cockpit mit Fake-Daten | P2 | React | ✅ |
 | 6 | UI ↔ simcore live | P2 | Integration | ⬜ |
 | 7 | Sound an simcore koppeln | P1 | Echtzeit-Threads | ⬜ |
 | 8 | Turbo + Klopfen + Turbo-Sound | P2 | Regelungstechnik | ⬜ |
@@ -291,6 +291,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Dyno-Graph mit uPlot, Overlay mehrerer Läufe.
 - Fake-Datenquelle mit derselben Schnittstelle wie der WebSocket-Client.
 **Abnahme:** Cockpit sieht gut aus, alles bewegt sich flüssig, Tabellen editierbar.
+**Umgesetzt (2026-11-19):** ADR 0005. Port `SimSource` mit `FakeSimSource` (Protokoll v1, asynchron, Daten aus `shared/`: Tabellen, Motor, Golden File). Eigener `SimStore` mit `useSyncExternalStore`; 60-Hz-Zustand ausserhalb von React, Nadeln und Live-Cursor per `requestAnimationFrame`. Gauges: Drehzahl (Warn- und Begrenzerzone, LIMIT-/DYNO-Anzeige), MAP (+ Boost in bar), Lambda (+ AFR, «CUT» bei Schubabschaltung), Zündung, IAT, EGT, dazu Digitalwerte. Tabelleneditor: Canvas-Heatmap (einfarbige Skala), Maus- und Tastaturauswahl, ±, grosse Schritte, Glätten, Ecken interpolieren, Wert setzen, Undo/Redo, Markierung geänderter Zellen, Live-Cursor mit Spur. Dyno: zwei uPlot-Graphen (Moment, Leistung) mit gekoppeltem Cursor statt doppelter Y-Achse, bis 8 Läufe im Overlay mit Spitzenwerten und Differenz. Zusätzlich zum Plan: Vitest (95 Tests) und Test-Schritt in CI. Fake-Dyno skaliert nur die Golden-Kurve (Zündungs- und Lambda-Faktor), echte Wirkung ab Iteration 6.
 
 ### Iteration 6 – UI ↔ simcore live
 - WebSocket-Client mit Reconnect, Umschalten Fake/Live.

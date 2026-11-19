@@ -26,6 +26,14 @@ Copyright (c) Meta Platforms, Inc. and affiliates.
 
 Copyright (c) Tailwind Labs, Inc.
 
+### uPlot 1.6.32
+- Source: https://github.com/leeoniya/uPlot
+- Licence: MIT
+- Used in: `ui/`, dyno charts (bundled into `ui/dist`)
+- Integration: npm
+
+Copyright (c) 2022 Leon Sorokin
+
 ### miniaudio 0.11.26
 - Source: https://github.com/mackron/miniaudio
 - Licence: Public Domain (Unlicense) or MIT No Attribution (MIT-0), at our choice
