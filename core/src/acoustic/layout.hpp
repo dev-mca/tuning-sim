@@ -11,6 +11,11 @@ enum class LayoutId { Inline4, Inline6, V8Crossplane, V8Flatplane };
 inline constexpr std::array kAllLayouts = {LayoutId::Inline4, LayoutId::Inline6,
                                            LayoutId::V8Crossplane, LayoutId::V8Flatplane};
 
+// research.md §6.3: hot exhaust near the valves ~590 m/s, cooler downstream.
+inline constexpr double kHotSoundSpeed_m_s = 590.0;
+inline constexpr double kWarmSoundSpeed_m_s = 520.0;
+inline constexpr double kCoolSoundSpeed_m_s = 480.0;
+
 /// A straight exhaust pipe section (research.md §6.3).
 struct PipeSpec {
     double length_m;

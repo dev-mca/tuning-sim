@@ -35,7 +35,12 @@ struct SetTableCells {
     std::vector<CellEdit> cells;
 };
 
-using Command = std::variant<SetPedal, StartSweep, StopSweep, GetTable, SetTableCells>;
+struct SetAudio {
+    double volume; // 0..1
+    bool muted;
+};
+
+using Command = std::variant<SetPedal, StartSweep, StopSweep, GetTable, SetTableCells, SetAudio>;
 
 struct IncomingCommand {
     std::string clientId;

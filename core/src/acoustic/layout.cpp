@@ -9,11 +9,6 @@ namespace {
 
 constexpr double kCycleDeg = 720.0;
 
-// research.md §6.3: hot exhaust near the valves ~590 m/s, cooler downstream.
-constexpr double kHotSoundSpeed_m_s = 590.0;
-constexpr double kWarmSoundSpeed_m_s = 520.0;
-constexpr double kCoolSoundSpeed_m_s = 480.0;
-
 PipeSpec primary(double length_m, double diameter_m = 0.040) {
     return {length_m, diameter_m, kHotSoundSpeed_m_s};
 }

@@ -63,6 +63,15 @@ CliParseResult parseCommandLine(const std::vector<std::string>& arguments) {
                 options.mode = CliMode::Sweep;
                 options.sweepFrom_rpm = parseNumber(reader.value(option), option);
                 options.sweepTo_rpm = parseNumber(reader.value(option), option);
+            } else if (option == "--sound-sweep") {
+                options.mode = CliMode::SoundSweep;
+                options.soundSweepFile = reader.value(option);
+                options.sweepFrom_rpm = kSoundSweepFrom_rpm;
+                options.sweepTo_rpm = kSoundSweepTo_rpm;
+            } else if (option == "--ignition-offset") {
+                options.ignitionOffset_deg = parseNumber(reader.value(option), option);
+            } else if (option == "--no-audio") {
+                options.audio = false;
             } else if (option == "--rate") {
                 options.sweepRate_rpm_s = parseNumber(reader.value(option), option);
             } else {
@@ -80,9 +89,12 @@ std::string usageText() {
            "  simcore [--engine <id>] [--port <n>]        serve the WebSocket API on 127.0.0.1\n"
            "  simcore --engine <id> --sweep <from> <to> [--rate <rpm/s>]\n"
            "                                             full-load dyno sweep as CSV on stdout\n"
+           "  simcore --sound-sweep <file.wav> [--ignition-offset <deg>] [--rate <rpm/s>]\n"
+           "                                             engine sound of a full-load sweep\n"
            "  simcore --version | --help\n"
            "options:\n"
-           "  --shared <dir>   folder with engines/ and tables/ (default: repository shared/)\n";
+           "  --shared <dir>   folder with engines/ and tables/ (default: repository shared/)\n"
+           "  --no-audio       serve without opening the audio output device\n";
 }
 
 } // namespace simcore

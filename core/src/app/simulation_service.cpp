@@ -1,5 +1,7 @@
 #include "app/simulation_service.hpp"
 
+#include "app/engine_acoustics.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -19,8 +21,8 @@ struct Overloaded : Ts... {
 } // namespace
 
 SimulationService::SimulationService(const LoadedEngine& engine, ICommandSource& commands,
-                                     IStatePublisher& publisher)
-    : commands_(commands), publisher_(publisher), simulation_(engine.definition),
+                                     IStatePublisher& publisher, IAcousticSink* sound)
+    : commands_(commands), publisher_(publisher), sound_(sound), simulation_(engine.definition),
       tables_(engine.tables) {}
 
 void SimulationService::step() {
@@ -62,6 +64,12 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                        }
                    },
                    [&](const SetTableCells& command) { applyCells(incoming, command); },
+                   [&](const SetAudio& command) {
+                       if (sound_ != nullptr) {
+                           sound_->setOutput(command.volume, command.muted);
+                       }
+                       reply(incoming, Ack{}); // without audio output the setting is moot
+                   },
                },
                incoming.command);
 }
@@ -140,6 +148,9 @@ void SimulationService::advance() {
 }
 
 void SimulationService::publish(const SimulationState& state) {
+    if (sound_ != nullptr) {
+        sound_->publish(acousticParams(state, simulation_.definition()));
+    }
     StateSnapshot snapshot;
     snapshot.time_s = state.time_s;
     snapshot.speed_rad_s = state.speed_rad_s;

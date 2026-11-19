@@ -26,7 +26,8 @@ add_library(simcore_acoustic STATIC
   src/acoustic/pulse_source.cpp
   src/acoustic/exhaust_network.cpp
   src/acoustic/engine_sound.cpp
-  src/acoustic/offline_render.cpp)
+  src/acoustic/offline_render.cpp
+  src/acoustic/acoustic_params.cpp)
 target_include_directories(simcore_acoustic PUBLIC src)
 target_compile_features(simcore_acoustic PUBLIC cxx_std_20)
 target_link_libraries(simcore_acoustic PRIVATE simcore_warnings)
@@ -51,13 +52,17 @@ add_library(simcore_lib STATIC
   src/adapters/message_bus.cpp
   src/adapters/sweep_csv.cpp
   src/adapters/websocket_server.cpp
-  src/adapters/wav_writer.cpp)
+  src/adapters/wav_writer.cpp
+  src/adapters/audio_output.cpp
+  src/app/engine_acoustics.cpp
+  src/app/sound_renderer.cpp
+  src/app/sound_sweep.cpp)
 target_include_directories(simcore_lib PUBLIC include src)
 target_compile_features(simcore_lib PUBLIC cxx_std_20)
 target_compile_definitions(simcore_lib PRIVATE SIMCORE_VERSION="${PROJECT_VERSION}")
 target_link_libraries(simcore_lib
   PUBLIC nlohmann_json::nlohmann_json simcore_acoustic
-  PRIVATE simcore_warnings ixwebsocket::ixwebsocket)
+  PRIVATE simcore_warnings ixwebsocket::ixwebsocket miniaudio)
 
 # --- Executable ---------------------------------------------------------------
 add_executable(simcore

@@ -39,9 +39,27 @@ TEST_CASE("sweep options are parsed") {
     CHECK(result.options->sweepRate_rpm_s == 500.0);
 }
 
+TEST_CASE("sound sweep and audio options are parsed") {
+    const CliParseResult result =
+        parseCommandLine({"--sound-sweep", "out.wav", "--ignition-offset", "-10", "--no-audio"});
+    REQUIRE(result.options.has_value());
+    CHECK(result.options->mode == CliMode::SoundSweep);
+    CHECK(result.options->soundSweepFile == "out.wav");
+    CHECK(result.options->ignitionOffset_deg == -10.0);
+    CHECK(result.options->sweepFrom_rpm == kSoundSweepFrom_rpm);
+    CHECK(result.options->sweepTo_rpm == kSoundSweepTo_rpm);
+    CHECK_FALSE(result.options->audio);
+    CHECK(parseCommandLine({}).options->audio);
+}
+
 TEST_CASE("invalid command lines are rejected with a message") {
-    for (const auto& arguments : std::vector<std::vector<std::string>>{
-             {"--sweep", "1000"}, {"--port", "abc"}, {"--port", "70000"}, {"--fly"}}) {
+    for (const auto& arguments :
+         std::vector<std::vector<std::string>>{{"--sweep", "1000"},
+                                               {"--port", "abc"},
+                                               {"--port", "70000"},
+                                               {"--fly"},
+                                               {"--sound-sweep"},
+                                               {"--ignition-offset", "x"}}) {
         const CliParseResult result = parseCommandLine(arguments);
         CHECK_FALSE(result.options.has_value());
         CHECK_FALSE(result.error.empty());

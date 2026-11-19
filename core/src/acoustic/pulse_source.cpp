@@ -62,7 +62,7 @@ double PulseSource::jitteredTrigger(double evoAngle_deg) noexcept {
     return wrapAngle(evoAngle_deg + kTimingJitter_deg * static_cast<double>(random_.uniform()));
 }
 
-float PulseSource::pulseShape(double phase) noexcept {
+float PulseSource::pulseShape(double phase, double riseFraction) noexcept {
     // Smooth (continuous slope) raised-cosine pulse with a fast rise and a slower decay.
     // Smoothness keeps the spectrum band-limited; hard rectangles would alias (§6.2 step 4).
     if (phase < 0.0 || phase >= 1.0) {
@@ -70,9 +70,9 @@ float PulseSource::pulseShape(double phase) noexcept {
     }
     const double pi = std::numbers::pi;
     const double value =
-        phase < kRiseFraction
-            ? 0.5 * (1.0 - std::cos(pi * phase / kRiseFraction))
-            : 0.5 * (1.0 + std::cos(pi * (phase - kRiseFraction) / (1.0 - kRiseFraction)));
+        phase < riseFraction
+            ? 0.5 * (1.0 - std::cos(pi * phase / riseFraction))
+            : 0.5 * (1.0 + std::cos(pi * (phase - riseFraction) / (1.0 - riseFraction)));
     return static_cast<float>(value);
 }
 
@@ -81,9 +81,11 @@ void PulseSource::process(double speed_rpm, float load, std::span<float> out) no
     const double previous = crankAngle_deg_;
     const double now = static_cast<double>(sampleIndex_);
     const double degPerSecond = std::max(step_deg * sampleRate_, 1.0e-9);
+    const double softness = static_cast<double>(softness_);
     const double durationSamples =
         std::clamp(kPulseCrankAngle_deg / degPerSecond, kMinPulseDuration_s, kMaxPulseDuration_s) *
-        sampleRate_;
+        (1.0 + kSoftWidening * softness) * sampleRate_;
+    const double riseFraction = kRiseFraction + (kSoftRiseFraction - kRiseFraction) * softness;
     const float loadAmplitude = kMinLoadAmplitude + (1.0F - kMinLoadAmplitude) * load;
 
     for (std::size_t k = 0; k < cylinders_.size(); ++k) {
@@ -100,14 +102,15 @@ void PulseSource::process(double speed_rpm, float load, std::span<float> out) no
             cylinder.active = true;
             cylinder.pulseStart = now - 1.0 + fraction; // between the previous and this sample
             cylinder.pulseDuration = durationSamples;
+            cylinder.riseFraction = riseFraction;
             cylinder.amplitude = loadAmplitude * cylinder.imbalance *
-                                 (1.0F + kAmplitudeVariation * random_.gaussian());
+                                 (1.0F + amplitudeVariation_ * random_.gaussian());
             cylinder.nextTrigger_deg = jitteredTrigger(cylinder.evoAngle_deg);
         }
         float value = 0.0F;
         if (cylinder.active) {
             const double phase = (now - cylinder.pulseStart) / cylinder.pulseDuration;
-            value = cylinder.amplitude * pulseShape(phase);
+            value = cylinder.amplitude * pulseShape(phase, cylinder.riseFraction);
             cylinder.active = phase < 1.0;
         }
         out[k] = value;

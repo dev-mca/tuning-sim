@@ -45,6 +45,7 @@ EngineSound::EngineSound(const LayoutSpec& layout, float sampleRate, std::uint32
       exhaust_(layout, sampleRate), sources_(layout.cylinders.size(), 0.0F),
       speed_(kMaxSpeedChange_rpm_s, kSpeedSmoothing_s, static_cast<double>(sampleRate)),
       load_(1.0e9, kLoadSmoothing_s, static_cast<double>(sampleRate)),
+      brightness_(1.0e9, kBrightnessSmoothing_s, static_cast<double>(sampleRate)),
       channels_{Channel(makeMufflerResponse(sampleRate, seed), sampleRate),
                 Channel(makeMufflerResponse(sampleRate, seed), sampleRate)} {
     reset(0.0, 0.0F);
@@ -55,6 +56,7 @@ void EngineSound::reset(double speed_rpm, float load) noexcept {
     exhaust_.reset();
     speed_.jumpTo(speed_rpm);
     load_.jumpTo(static_cast<double>(load));
+    brightness_.jumpTo(1.0);
     for (Channel& channel : channels_) {
         channel.muffler.reset();
         channel.tone.reset();
@@ -64,20 +66,26 @@ void EngineSound::reset(double speed_rpm, float load) noexcept {
 }
 
 void EngineSound::updateTone() noexcept {
-    const float load = currentLoad();
-    const float cutoff =
-        kToneCutoffAtZeroLoadHz + (kToneCutoffAtFullLoadHz - kToneCutoffAtZeroLoadHz) * load;
+    const float load = std::min(currentLoad(), 1.0F);
+    const auto brightness = static_cast<float>(brightness_.value());
+    const float cutoff = std::max(
+        (kToneCutoffAtZeroLoadHz + (kToneCutoffAtFullLoadHz - kToneCutoffAtZeroLoadHz) * load) *
+            brightness,
+        kMinToneCutoffHz);
     for (Channel& channel : channels_) {
         channel.tone.setCutoff(cutoff, sampleRate_);
     }
 }
 
-void EngineSound::render(std::span<float> interleavedStereo, double targetSpeed_rpm,
-                         float targetLoad) noexcept {
-    const double clampedLoad = std::clamp(static_cast<double>(targetLoad), 0.0, 1.0);
+void EngineSound::render(std::span<float> interleavedStereo, const SoundTarget& target) noexcept {
+    const double clampedLoad =
+        std::clamp(static_cast<double>(target.load), 0.0, static_cast<double>(kMaxLoad));
+    const double clampedBrightness = std::clamp(static_cast<double>(target.brightness), 0.0, 1.0);
+    pulses_.setCycleVariation(std::max(target.cycleVariation, 0.0F));
     for (std::size_t frame = 0; frame + 1 < interleavedStereo.size(); frame += 2) {
-        const double speed = speed_.process(std::max(0.0, targetSpeed_rpm));
+        const double speed = speed_.process(std::max(0.0, target.speed_rpm));
         const auto load = static_cast<float>(load_.process(clampedLoad));
+        pulses_.setSoftness(static_cast<float>(1.0 - brightness_.process(clampedBrightness)));
         if (samplesUntilToneUpdate_ == 0) {
             updateTone();
             samplesUntilToneUpdate_ = kToneUpdateInterval;
