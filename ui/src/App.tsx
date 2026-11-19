@@ -1,43 +1,57 @@
-const UI_VERSION = '0.1.0';
+import { useEffect, useState } from 'react';
 
-const PLANNED_PANELS = [
-  { title: 'Gauges', detail: 'rpm · boost · lambda · IAT · ignition' },
-  { title: 'ECU tables', detail: 'VE · lambda target · ignition (heatmap)' },
-  { title: 'Dyno', detail: 'torque & power curves, run overlay' },
-] as const;
+import { FakeSimSource } from './sim/fake/FakeSimSource.ts';
+import { SimStore } from './state/simStore.ts';
+import { StoreContext, useSnapshot } from './state/StoreContext.ts';
+import { ControlBar } from './ui/controls/ControlBar.tsx';
+import { DynoPanel } from './ui/dyno/DynoPanel.tsx';
+import { GaugeCluster } from './ui/gauges/GaugeCluster.tsx';
+import { ErrorToast } from './ui/layout/ErrorToast.tsx';
+import { TablePanel } from './ui/table/TablePanel.tsx';
 
+/**
+ * Composition root: the only place that decides which SimSource the UI uses.
+ * Iteration 6 adds the WebSocket client here and a switch between fake and live.
+ */
 export function App() {
+  const [store] = useState(() => new SimStore(new FakeSimSource()));
+
+  useEffect(() => {
+    store.start();
+    return () => {
+      store.stop();
+    };
+  }, [store]);
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center gap-10 px-6 py-16">
-      <header className="flex flex-col gap-3">
-        <p className="font-mono text-sm tracking-widest text-accent uppercase">
-          engine tuning simulator
-        </p>
-        <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
+    <StoreContext value={store}>
+      <Cockpit />
+    </StoreContext>
+  );
+}
+
+/** Layout from plan.md §7: gauges on top, table editor left, dyno right, controls at the bottom. */
+function Cockpit() {
+  const { hello } = useSnapshot();
+  return (
+    <div className="mx-auto flex min-h-screen max-w-[110rem] flex-col gap-4 p-4">
+      <header className="flex flex-wrap items-baseline justify-between gap-2 px-1">
+        <h1 className="text-xl font-bold tracking-tight">
           tuning<span className="text-redline">-</span>sim
         </h1>
-        <p className="max-w-2xl text-lg text-muted">
-          ECU maps, boost, dyno and physically synthesised engine sound. The cockpit UI is coming
-          together step by step.
+        <p className="text-sm text-muted">
+          {hello === null
+            ? 'connecting…'
+            : `${hello.engine.name} · ${hello.engine.displacement_l.toFixed(3)} l · simcore ${hello.simcore}`}
         </p>
       </header>
-
-      <section aria-label="Planned panels" className="grid gap-4 sm:grid-cols-3">
-        {PLANNED_PANELS.map((panel) => (
-          <article key={panel.title} className="rounded-xl border border-line bg-panel p-5">
-            <h2 className="font-semibold">{panel.title}</h2>
-            <p className="mt-1 text-sm text-muted">{panel.detail}</p>
-          </article>
-        ))}
-      </section>
-
-      <footer className="flex items-center gap-3 font-mono text-xs text-muted">
-        <span className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1">
-          <span className="size-2 rounded-full bg-muted" aria-hidden="true" />
-          simcore: not connected
-        </span>
-        <span>ui v{UI_VERSION}</span>
-      </footer>
-    </main>
+      <GaugeCluster />
+      <main className="grid flex-1 grid-cols-1 gap-4 xl:grid-cols-2">
+        <TablePanel />
+        <DynoPanel />
+      </main>
+      <ControlBar />
+      <ErrorToast />
+    </div>
   );
 }
