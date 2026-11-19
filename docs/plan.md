@@ -361,3 +361,6 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Logging und Log-Viewer (wie MegaLogViewer)
 - Auto-Tune der VE-Tabelle aus simulierten Lambda-Messungen
 - WebAssembly-Web-Demo
+- Realistisches Abgassystem implementieren (von Krümmer bis Enddtop alle Komponenten)
+- Neue Werte wie Katalysatortemparatur (Motor dreht beim Kaltstart etwas höher beim idle, um den Kat schnell warm zu bekommen, darum hört sich das auto cooler an)
+- Schubabschaltung abstellen und dann sollte es beim warmen Kat knallen, burblen usw. 
