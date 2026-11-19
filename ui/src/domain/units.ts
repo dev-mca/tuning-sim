@@ -25,3 +25,16 @@ export function mapToBoostBar(map_kPa: number): number {
 export function kwToPs(power_kW: number): number {
   return power_kW / KW_PER_PS;
 }
+
+/** Significant digits kept for display; removes noise such as 1100.0000000000002 rpm. */
+const DISPLAY_PRECISION = 10;
+
+/**
+ * Formats an axis or measured value without floating-point noise. simcore converts rad/s back
+ * to rpm, which turns 1100 into 1100.0000000000002; this shows "1100".
+ */
+export function formatClean(value: number, maxDecimals = 3): string {
+  const clean = Number(value.toPrecision(DISPLAY_PRECISION));
+  const factor = 10 ** maxDecimals;
+  return String(Math.round(clean * factor) / factor);
+}

@@ -1,55 +1,62 @@
 import type { CellValue, TableId } from '../protocol/messages.ts';
 
-/** One user action on one table: the cells before and after, so it can be undone and redone. */
+/** The cells of one table before and after a change, so it can be undone and redone. */
 export interface TableEdit {
   tableId: TableId;
   before: CellValue[];
   after: CellValue[];
 }
 
-/** Older edits are dropped beyond this; a tuning session rarely needs more. */
+/**
+ * One user action, e.g. "+0.5 on the selection" (one table) or "load tune" (several tables).
+ * Undo reverts the whole step at once.
+ */
+export type EditStep = readonly TableEdit[];
+
+/** Older steps are dropped beyond this; a tuning session rarely needs more. */
 export const DEFAULT_HISTORY_LIMIT = 200;
 
 /**
  * Undo/redo stack (command pattern without command objects: an edit is pure data).
- * A new edit clears the redo stack, as in every editor.
+ * A new step clears the redo stack, as in every editor.
  */
 export class EditHistory {
-  private readonly undoStack: TableEdit[] = [];
-  private readonly redoStack: TableEdit[] = [];
+  private readonly undoStack: EditStep[] = [];
+  private readonly redoStack: EditStep[] = [];
   private readonly limit: number;
 
   constructor(limit = DEFAULT_HISTORY_LIMIT) {
     this.limit = limit;
   }
 
-  record(edit: TableEdit): void {
-    if (edit.after.length === 0) {
+  record(step: EditStep): void {
+    const effective = step.filter((edit) => edit.after.length > 0);
+    if (effective.length === 0) {
       return;
     }
-    this.undoStack.push(edit);
+    this.undoStack.push(effective);
     if (this.undoStack.length > this.limit) {
       this.undoStack.shift();
     }
     this.redoStack.length = 0;
   }
 
-  /** Returns the edit to revert (apply its `before` cells), or undefined if there is none. */
-  undo(): TableEdit | undefined {
-    const edit = this.undoStack.pop();
-    if (edit !== undefined) {
-      this.redoStack.push(edit);
+  /** Returns the step to revert (apply each `before`), or undefined if there is none. */
+  undo(): EditStep | undefined {
+    const step = this.undoStack.pop();
+    if (step !== undefined) {
+      this.redoStack.push(step);
     }
-    return edit;
+    return step;
   }
 
-  /** Returns the edit to repeat (apply its `after` cells), or undefined if there is none. */
-  redo(): TableEdit | undefined {
-    const edit = this.redoStack.pop();
-    if (edit !== undefined) {
-      this.undoStack.push(edit);
+  /** Returns the step to repeat (apply each `after`), or undefined if there is none. */
+  redo(): EditStep | undefined {
+    const step = this.redoStack.pop();
+    if (step !== undefined) {
+      this.undoStack.push(step);
     }
-    return edit;
+    return step;
   }
 
   get canUndo(): boolean {

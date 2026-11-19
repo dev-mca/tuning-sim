@@ -15,6 +15,7 @@ interface Readout {
 }
 
 const KG_S_TO_G_S = 1000;
+const NO_DATA_TEXT = '—';
 
 const READOUTS: readonly Readout[] = [
   {
@@ -59,6 +60,11 @@ export function LiveReadouts() {
   useAnimationFrame((dt_s) => {
     const state = store.latestState();
     if (state === null) {
+      // Disconnected: show no numbers rather than the last, now stale values.
+      smoothed.current.clear();
+      for (const element of valueRefs.current.values()) {
+        element.textContent = NO_DATA_TEXT;
+      }
       return;
     }
     for (const readout of READOUTS) {

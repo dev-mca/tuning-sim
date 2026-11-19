@@ -82,8 +82,8 @@ describe('SimStore', () => {
     const store = startedStore();
     store.startSweep({ rpmFrom: 3000, rpmTo: 1000 });
     vi.advanceTimersByTime(0);
-    expect(store.getSnapshot().lastError).toMatch(/sweep range/);
-    store.dismissError();
-    expect(store.getSnapshot().lastError).toBeNull();
+    expect(store.getSnapshot().toast?.text).toMatch(/sweep range/);
+    store.dismissToast();
+    expect(store.getSnapshot().toast).toBeNull();
   });
 });

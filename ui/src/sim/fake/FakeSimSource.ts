@@ -33,6 +33,7 @@ export interface FakeSimSourceOptions {
  */
 export class FakeSimSource implements SimSource {
   readonly kind = 'fake';
+  readonly address = 'in-browser fake';
 
   private readonly messageListeners = new Set<(message: ServerMessage) => void>();
   private readonly statusListeners = new Set<(status: ConnectionStatus) => void>();

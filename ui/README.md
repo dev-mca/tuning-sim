@@ -9,11 +9,25 @@ npm ci               # install exact versions from package-lock.json
 npm run dev          # dev server with hot reload, http://localhost:5173
 npm run build        # type check + production build into dist/
 npm test             # Vitest unit tests (npm run test:watch while developing)
+npm run test:e2e     # end-to-end test, needs a running simcore (see below)
 npm run lint         # ESLint (type-aware rules)
 npm run format       # Prettier (write); format:check only checks
 ```
 
-## Structure (iteration 5, ADR 0005)
+## Live or fake
+
+The cockpit starts with the source chosen last (switch in the bottom bar), `?source=fake` or
+`?source=live` in the URL overrides it. Live mode connects to `ws://127.0.0.1:47800`; another
+address goes into `ui/.env.local` as `VITE_SIMCORE_URL=ws://127.0.0.1:47801`.
+
+```bash
+./build/debug/core/simcore        # from the repository root, in a second terminal
+cd ui && npm run test:e2e         # retard ignition by 5 deg, check that torque drops
+```
+
+Tunes are saved and loaded with the buttons at the top right (JSON, ADR 0006).
+
+## Structure (iterations 5 and 6, ADR 0005/0006)
 
 | Folder          | Content                                                                                   |
 | --------------- | ----------------------------------------------------------------------------------------- |

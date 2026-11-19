@@ -226,7 +226,7 @@ function RunTable({ runs, hoverRpm }: { runs: readonly DynoRun[]; hoverRpm: numb
             Peak power
           </th>
           <th scope="col" className="text-right">
-            {hoverRpm === null ? 'At cursor' : `@ ${String(hoverRpm)} 1/min`}
+            {hoverRpm === null ? 'At cursor' : `@ ${hoverRpm.toFixed(0)} 1/min`}
           </th>
           <th scope="col">
             <span className="sr-only">Actions</span>
@@ -265,6 +265,12 @@ function RunTable({ runs, hoverRpm }: { runs: readonly DynoRun[]; hoverRpm: numb
                   />
                   <span className="font-semibold text-ink">{run.label}</span>
                 </label>
+                <span
+                  className="mt-0.5 block max-w-[16rem] truncate text-[0.7rem] text-muted"
+                  title={run.note}
+                >
+                  {run.note}
+                </span>
               </td>
               <td className="text-right text-ink">
                 {torque === null ? '—' : `${torque.value.toFixed(1)} Nm`}
@@ -276,7 +282,7 @@ function RunTable({ runs, hoverRpm }: { runs: readonly DynoRun[]; hoverRpm: numb
                   </span>
                 )}
                 <span className="block text-muted">
-                  {torque === null ? '' : `@ ${String(torque.rpm)}`}
+                  {torque === null ? '' : `@ ${torque.rpm.toFixed(0)}`}
                 </span>
               </td>
               <td className="text-right text-ink">
@@ -284,7 +290,7 @@ function RunTable({ runs, hoverRpm }: { runs: readonly DynoRun[]; hoverRpm: numb
                 <span className="block text-muted">
                   {power === null
                     ? ''
-                    : `${kwToPs(power.value).toFixed(0)} PS @ ${String(power.rpm)}`}
+                    : `${kwToPs(power.value).toFixed(0)} PS @ ${power.rpm.toFixed(0)}`}
                 </span>
               </td>
               <td className="text-right text-ink">

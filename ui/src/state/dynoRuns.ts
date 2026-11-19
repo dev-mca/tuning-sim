@@ -10,6 +10,8 @@ export interface DynoRun {
   /** Index into the categorical palette (0..MAX_RUNS-1). */
   colorSlot: number;
   visible: boolean;
+  /** Which tune produced the run, e.g. "ignition: 12 cells, mean −2.5 deg BTDC". */
+  note: string;
   result: DynoResultPayload;
 }
 
@@ -21,13 +23,14 @@ export function addRun(
   runs: readonly DynoRun[],
   runNumber: number,
   result: DynoResultPayload,
+  note = '',
 ): DynoRun[] {
   const kept = runs.length >= MAX_RUNS ? runs.slice(runs.length - MAX_RUNS + 1) : [...runs];
   const usedSlots = new Set(kept.map((run) => run.colorSlot));
   const colorSlot = firstFreeSlot(usedSlots);
   return [
     ...kept,
-    { id: runNumber, label: `Run ${String(runNumber)}`, colorSlot, visible: true, result },
+    { id: runNumber, label: `Run ${String(runNumber)}`, colorSlot, visible: true, note, result },
   ];
 }
 

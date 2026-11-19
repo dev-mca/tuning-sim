@@ -1,6 +1,7 @@
 import { isSelected, type Selection } from '../../domain/selection.ts';
 import { cellValue } from '../../domain/table2d.ts';
 import { editPrecision } from '../../domain/tableEdit.ts';
+import { formatClean } from '../../domain/units.ts';
 import type { TableData } from '../../protocol/messages.ts';
 import { normalise, sequentialColor } from '../theme/colorScale.ts';
 import { SURFACE } from '../theme/palette.ts';
@@ -156,12 +157,12 @@ function drawAxes(
   context.textBaseline = 'middle';
   table.yAxis.bins.forEach((bin, y) => {
     const rect = cellRect(layout, { x: 0, y });
-    context.fillText(String(bin), layout.axisLeft - 6, rect.y + rect.height / 2);
+    context.fillText(formatClean(bin), layout.axisLeft - 6, rect.y + rect.height / 2);
   });
   context.textAlign = 'center';
   context.textBaseline = 'top';
   table.xAxis.bins.forEach((bin, x) => {
     const rect = cellRect(layout, { x, y: 0 });
-    context.fillText(String(bin), rect.x + rect.width / 2, rect.y + rect.height + 6);
+    context.fillText(formatClean(bin), rect.x + rect.width / 2, rect.y + rect.height + 6);
   });
 }
