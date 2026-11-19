@@ -15,13 +15,13 @@ npm run format       # Prettier (write); format:check only checks
 
 ## Structure (iteration 5, ADR 0005)
 
-| Folder | Content |
-|---|---|
-| `src/protocol/` | Types of protocol v1 (`docs/interface.md`) |
-| `src/sim/` | Port `SimSource`; `fake/` = fake simcore (engine, dyno, protocol) built on `shared/` data |
-| `src/domain/` | Pure logic: table interpolation, selection, edits, undo, smoothing, units |
-| `src/state/` | `SimStore` (snapshot for React, 60 Hz state outside React), dyno runs |
-| `src/ui/` | Components: gauges (SVG), table editor (canvas), dyno (uPlot), controls, theme |
+| Folder          | Content                                                                                   |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| `src/protocol/` | Types of protocol v1 (`docs/interface.md`)                                                |
+| `src/sim/`      | Port `SimSource`; `fake/` = fake simcore (engine, dyno, protocol) built on `shared/` data |
+| `src/domain/`   | Pure logic: table interpolation, selection, edits, undo, smoothing, units                 |
+| `src/state/`    | `SimStore` (snapshot for React, 60 Hz state outside React), dyno runs                     |
+| `src/ui/`       | Components: gauges (SVG), table editor (canvas), dyno (uPlot), controls, theme            |
 
 Table editor keys: arrows (Shift = extend), `+`/`-`, PageUp/PageDown (5 steps), `S` smooth,
 `I` interpolate corners, Ctrl+Z / Ctrl+Y, Ctrl+A. Hold Space anywhere for full throttle.
