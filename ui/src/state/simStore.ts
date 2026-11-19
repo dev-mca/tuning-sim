@@ -1,4 +1,4 @@
-import { EditHistory, type TableEdit } from '../domain/editHistory.ts';
+import { EditHistory, type EditStep } from '../domain/editHistory.ts';
 import { applyCells, readCells } from '../domain/tableEdit.ts';
 import {
   type CellValue,
@@ -133,7 +133,7 @@ export class SimStore {
       return;
     }
     const before = readCells(table, changes);
-    this.history.record({ tableId, before, after: [...changes] });
+    this.history.record([{ tableId, before, after: [...changes] }]);
     this.applyAndSend(tableId, changes);
   }
 
@@ -228,8 +228,8 @@ export class SimStore {
 
   // --- helpers ---------------------------------------------------------------------------
 
-  private replay(edit: TableEdit | undefined, side: 'before' | 'after'): void {
-    if (edit !== undefined) {
+  private replay(step: EditStep | undefined, side: 'before' | 'after'): void {
+    for (const edit of step ?? []) {
       this.applyAndSend(edit.tableId, edit[side]);
     }
   }
