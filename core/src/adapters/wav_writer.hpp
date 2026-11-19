@@ -5,7 +5,7 @@
 #include <span>
 #include <vector>
 
-namespace sound_spike {
+namespace simcore {
 
 /// Encodes interleaved float samples in [-1, 1] as a 16-bit PCM WAV file (RIFF format).
 [[nodiscard]] std::vector<std::uint8_t>
@@ -15,4 +15,4 @@ encodeWav16(std::span<const float> interleaved, std::uint16_t channels, std::uin
 [[nodiscard]] bool writeWav16(const std::filesystem::path& path, std::span<const float> interleaved,
                               std::uint16_t channels, std::uint32_t sampleRate);
 
-} // namespace sound_spike
+} // namespace simcore

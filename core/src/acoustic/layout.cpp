@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <initializer_list>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 namespace {
 
@@ -111,4 +111,4 @@ std::string_view layoutKey(LayoutId id) {
     return "unknown";
 }
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

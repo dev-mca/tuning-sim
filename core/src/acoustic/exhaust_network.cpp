@@ -3,7 +3,7 @@
 #include <cmath>
 #include <numbers>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 namespace {
 
@@ -151,4 +151,4 @@ StereoSample ExhaustNetwork::process(std::span<const float> cylinderSources) noe
     return output;
 }
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

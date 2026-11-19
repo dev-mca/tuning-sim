@@ -7,7 +7,7 @@
 #include <span>
 #include <vector>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 /// Exhaust pulse sources, one per cylinder (research.md §6.2, steps 1-4).
 ///
@@ -62,4 +62,4 @@ private:
     std::int64_t sampleIndex_ = 0;
 };
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

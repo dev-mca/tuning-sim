@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 FirFilter::FirFilter(std::vector<float> taps)
     : taps_(std::move(taps)), history_(2 * taps_.size(), 0.0F) {}
@@ -30,4 +30,4 @@ float FirFilter::process(float input) noexcept {
     return sum;
 }
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

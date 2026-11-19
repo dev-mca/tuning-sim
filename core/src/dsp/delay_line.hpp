@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <vector>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 /// Ring buffer with fractional read position (linear interpolation).
 /// A pipe of length L delays sound by L / c seconds = L * fs / c samples (research.md §6.3),
@@ -28,4 +28,4 @@ private:
     std::size_t writeIndex_ = 0;
 };
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

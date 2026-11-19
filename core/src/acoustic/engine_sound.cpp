@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 namespace {
 
@@ -97,4 +97,4 @@ void EngineSound::render(std::span<float> interleavedStereo, double targetSpeed_
     }
 }
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

@@ -4,7 +4,7 @@
 #include <cmath>
 #include <numbers>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 /// One-pole low-pass: y += a (x - y), a = 1 - exp(-2 pi fc / fs) (research.md §9).
 class OnePoleLowpass {
@@ -101,4 +101,4 @@ inline float softClip(float x) noexcept {
     return std::tanh(x);
 }
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

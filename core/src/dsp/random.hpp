@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 /// Small deterministic PRNG (xorshift32). Same seed -> same sound (docs/plan.md §2.3).
 /// No allocation, no locks: usable in the audio callback (std::random is not guaranteed to be).
@@ -35,4 +35,4 @@ private:
     std::uint32_t state_;
 };
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

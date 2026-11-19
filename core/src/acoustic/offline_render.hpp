@@ -3,12 +3,11 @@
 #include "acoustic/layout.hpp"
 
 #include <cstdint>
-#include <filesystem>
 #include <vector>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
-inline constexpr std::uint32_t kSampleRate = 48000; // plan.md iteration 3
+inline constexpr std::uint32_t kSampleRate = 48000; // plan.md §2.2
 inline constexpr std::uint16_t kStereo = 2;
 inline constexpr std::uint32_t kDefaultSeed = 12345;
 
@@ -33,11 +32,6 @@ template <typename Scenario>
                                                 double speed_rpm, float load,
                                                 std::uint32_t seed = kDefaultSeed);
 
-/// Renders the comparison scenario for every layout to `<directory>/<layout>.wav`.
-/// Returns the written files.
-[[nodiscard]] std::vector<std::filesystem::path>
-exportComparisonWavs(const std::filesystem::path& directory);
+} // namespace simcore::acoustic
 
-} // namespace sound_spike
-
-#include "io/offline_render_impl.hpp"
+#include "acoustic/offline_render_impl.hpp"

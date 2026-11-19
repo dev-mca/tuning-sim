@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <numbers>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 namespace {
 
@@ -116,4 +116,4 @@ void PulseSource::process(double speed_rpm, float load, std::span<float> out) no
     ++sampleIndex_;
 }
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

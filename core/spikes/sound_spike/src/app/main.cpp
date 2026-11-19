@@ -4,11 +4,12 @@
 //   sound_spike --export <dir>   render the 10 s comparison scenario of every layout to WAV
 
 #include "acoustic/layout.hpp"
+#include "acoustic/offline_render.hpp"
+#include "adapters/wav_writer.hpp"
 #include "app/audio_device.hpp"
 #include "app/keyboard.hpp"
 #include "app/sound_bank.hpp"
-#include "io/offline_render.hpp"
-#include "io/wav_writer.hpp"
+#include "io/comparison_export.hpp"
 
 #include <algorithm>
 #include <cstdio>

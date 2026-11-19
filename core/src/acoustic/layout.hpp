@@ -4,7 +4,7 @@
 #include <string_view>
 #include <vector>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 enum class LayoutId { Inline4, Inline6, V8Crossplane, V8Flatplane };
 
@@ -45,4 +45,4 @@ struct LayoutSpec {
 [[nodiscard]] LayoutSpec makeLayout(LayoutId id);
 [[nodiscard]] std::string_view layoutKey(LayoutId id); // file-name friendly, e.g. "v8_crossplane"
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

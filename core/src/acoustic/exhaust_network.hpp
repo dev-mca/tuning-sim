@@ -9,7 +9,7 @@
 #include <span>
 #include <vector>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 /// Stereo sample pair.
 struct StereoSample {
@@ -81,4 +81,4 @@ private:
     std::size_t cylinderCount_;
 };
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

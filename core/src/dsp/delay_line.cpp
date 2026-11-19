@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 namespace {
 
@@ -45,4 +45,4 @@ float DelayLine::read(double delaySamples) const noexcept {
     return buffer_[newer] + fraction * (buffer_[older] - buffer_[newer]);
 }
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

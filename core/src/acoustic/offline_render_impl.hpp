@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <span>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 template <typename Scenario>
 std::vector<float> renderOffline(LayoutId layout, double duration_s, Scenario scenario,
@@ -30,4 +30,4 @@ std::vector<float> renderOffline(LayoutId layout, double duration_s, Scenario sc
     return output;
 }
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

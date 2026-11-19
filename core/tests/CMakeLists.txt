@@ -9,7 +9,11 @@ add_executable(simcore_tests
   protocol_test.cpp
   simulation_service_test.cpp
   app_test.cpp
-  websocket_server_test.cpp)
+  websocket_server_test.cpp
+  acoustic/dsp_test.cpp
+  acoustic/pulse_source_test.cpp
+  acoustic/exhaust_network_test.cpp
+  acoustic/engine_sound_test.cpp)
 target_link_libraries(simcore_tests PRIVATE
   simcore_lib
   simcore_warnings

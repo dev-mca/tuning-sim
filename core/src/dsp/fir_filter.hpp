@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <vector>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 /// Direct-form FIR convolution y[n] = sum_k h[k] x[n-k] (research.md §6.4).
 /// Fine for short impulse responses (a few hundred taps); longer ones would need
@@ -21,4 +21,4 @@ private:
     std::size_t position_ = 0;
 };
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

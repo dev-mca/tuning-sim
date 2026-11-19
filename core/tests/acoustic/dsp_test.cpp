@@ -1,8 +1,8 @@
+#include "adapters/wav_writer.hpp"
 #include "dsp/delay_line.hpp"
 #include "dsp/filters.hpp"
 #include "dsp/fir_filter.hpp"
 #include "dsp/random.hpp"
-#include "io/wav_writer.hpp"
 
 #include <doctest/doctest.h>
 
@@ -10,7 +10,8 @@
 #include <cstdint>
 #include <vector>
 
-using namespace sound_spike;
+using namespace simcore::acoustic;
+using simcore::encodeWav16;
 
 TEST_CASE("delay line returns samples after an integer delay") {
     DelayLine line(16.0);

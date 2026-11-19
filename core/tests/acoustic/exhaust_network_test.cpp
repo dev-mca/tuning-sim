@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <vector>
 
-using namespace sound_spike;
+using namespace simcore::acoustic;
 
 namespace {
 

@@ -12,7 +12,7 @@
 #include <span>
 #include <vector>
 
-namespace sound_spike {
+namespace simcore::acoustic {
 
 /// Complete exhaust sound of one engine layout (research.md §6.2-6.4, §6.8).
 ///
@@ -64,4 +64,4 @@ private:
 /// tail (research.md §6.4: "zuerst synthetisch"). Deterministic for a given seed.
 [[nodiscard]] std::vector<float> makeMufflerResponse(float sampleRate, std::uint32_t seed);
 
-} // namespace sound_spike
+} // namespace simcore::acoustic

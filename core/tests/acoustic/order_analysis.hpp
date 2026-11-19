@@ -9,7 +9,7 @@
 #include <span>
 #include <vector>
 
-namespace sound_spike::testing {
+namespace simcore::acoustic::testing {
 
 /// One channel (0 = left, 1 = right) of an interleaved stereo signal.
 inline std::vector<float> channel(std::span<const float> interleaved, std::size_t index) {
@@ -60,4 +60,4 @@ inline double shareOnMultiplesOf(std::span<const float> signal, double base, dou
     return onMultiples / total;
 }
 
-} // namespace sound_spike::testing
+} // namespace simcore::acoustic::testing

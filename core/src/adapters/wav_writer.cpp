@@ -1,11 +1,11 @@
-#include "io/wav_writer.hpp"
+#include "adapters/wav_writer.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <string_view>
 
-namespace sound_spike {
+namespace simcore {
 
 namespace {
 
@@ -70,4 +70,4 @@ bool writeWav16(const std::filesystem::path& path, std::span<const float> interl
     return file.good();
 }
 
-} // namespace sound_spike
+} // namespace simcore
