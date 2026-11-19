@@ -5,10 +5,13 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <array>
 #include <fstream>
 #include <stdexcept>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace simcore {
 
@@ -70,6 +73,37 @@ double rpm(const json& data, const char* key) {
     return units::rpmToRadS(data.at(key).get<double>());
 }
 
+ExhaustGeometry parseExhaustGeometry(const json& exhaust) {
+    return {exhaust.at("primaryLength_m").get<std::vector<double>>(),
+            exhaust.at("primaryDiameter_m").get<double>(),
+            exhaust.at("collectorGroups").get<std::vector<std::vector<int>>>(),
+            exhaust.at("collectorLength_m").get<double>(),
+            exhaust.at("collectorDiameter_m").get<double>(),
+            exhaust.at("mergeGroups").get<bool>(),
+            exhaust.at("tailpipeLength_m").get<double>(),
+            exhaust.at("tailpipeDiameter_m").get<double>()};
+}
+
+/// Every cylinder needs a primary pipe and must flow into exactly one collector group.
+void validateExhaustGeometry(const ExhaustGeometry& exhaust, int cylinders) {
+    if (exhaust.primaryLength_m.size() != static_cast<std::size_t>(cylinders)) {
+        throw std::runtime_error("exhaust.primaryLength_m needs one entry per cylinder");
+    }
+    std::vector<int> seen(static_cast<std::size_t>(cylinders), 0);
+    for (const std::vector<int>& group : exhaust.collectorGroups) {
+        for (const int cylinder : group) {
+            if (cylinder < 1 || cylinder > cylinders) {
+                throw std::runtime_error("exhaust.collectorGroups names cylinder " +
+                                         std::to_string(cylinder) + ", which does not exist");
+            }
+            ++seen[static_cast<std::size_t>(cylinder - 1)];
+        }
+    }
+    if (std::any_of(seen.begin(), seen.end(), [](int count) { return count != 1; })) {
+        throw std::runtime_error("exhaust.collectorGroups must contain every cylinder once");
+    }
+}
+
 } // namespace
 
 JsonFileRepository::JsonFileRepository(std::filesystem::path sharedDir)
@@ -120,7 +154,11 @@ LoadedEngine JsonFileRepository::load(const std::string& engineId) const {
              units::kpaToPa(friction.at("fmep_c2_kPa_per_krpm2").get<double>())},
             data.at("accessoryTorque_Nm").get<double>(),
             data.at("exhaust").at("backpressureCoefficient_Pa_s2_per_kg2").get<double>(),
-            {loaded[0].table, loaded[1].table, loaded[2].table, loaded[3].table}};
+            {loaded[0].table, loaded[1].table, loaded[2].table, loaded[3].table},
+            parseExhaustGeometry(data.at("exhaust")),
+            {rpm(data.at("overrunFuelCut"), "enter_rpm"),
+             rpm(data.at("overrunFuelCut"), "exit_rpm"),
+             data.at("overrunFuelCut").at("closedThrottle").get<double>()}};
 
         const auto cylinders = static_cast<std::size_t>(definition.cylinders);
         if (definition.firingOrder.size() != cylinders ||
@@ -128,6 +166,7 @@ LoadedEngine JsonFileRepository::load(const std::string& engineId) const {
             throw std::runtime_error(
                 "firingOrder and firingAngles_deg need one entry per cylinder");
         }
+        validateExhaustGeometry(definition.exhaustGeometry, definition.cylinders);
         std::vector<TableDescriptor> descriptors;
         for (const LoadedTable& table : loaded) {
             descriptors.push_back(table.descriptor);

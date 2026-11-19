@@ -14,7 +14,7 @@ EngineSimulation::EngineSimulation(const EngineDefinition& definition, std::opti
     : definition_(definition), model_(definition, trueVe),
       ecu_(tune ? std::move(*tune) : Tune::fromTables(definition.tables),
            definition.displacement_m3(), definition.revLimit_rad_s,
-           definition.revLimitHysteresis_rad_s),
+           definition.revLimitHysteresis_rad_s, definition.overrunCut),
       timeStep_s_(timeStep_s),
       speed_rad_s_(initialSpeed_rad_s.value_or(definition.idleSpeed_rad_s)),
       manifoldPressure_Pa_(constants::kAmbientPressure_Pa),
@@ -23,7 +23,7 @@ EngineSimulation::EngineSimulation(const EngineDefinition& definition, std::opti
 SimulationState EngineSimulation::step(double throttle, double loadTorque_Nm) noexcept {
     const double dt = timeStep_s_;
     const EcuCommand command =
-        ecu_.update(speed_rad_s_, manifoldPressure_Pa_, manifoldTemperature_K_);
+        ecu_.update(speed_rad_s_, manifoldPressure_Pa_, manifoldTemperature_K_, throttle);
     integrateManifold(throttle, dt);
     const EngineOutputs outputs =
         model_.evaluate({speed_rad_s_, manifoldPressure_Pa_, manifoldTemperature_K_,

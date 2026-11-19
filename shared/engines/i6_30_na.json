@@ -63,7 +63,13 @@
     "manifold": "3-into-1 x2",
     "primaryLength_m": [0.60, 0.55, 0.50, 0.60, 0.55, 0.50],
     "primaryDiameter_m": 0.040,
-    "collectorGroups": [[1, 2, 3], [4, 5, 6]]
+    "collectorGroups": [[1, 2, 3], [4, 5, 6]],
+    "_assumption_pipes": "Pipe after each collector and the common pipe after the Y-piece (incl. muffler and tailpipe), typical lengths; used by the sound model (research.md §6.3).",
+    "collectorLength_m": 0.8,
+    "collectorDiameter_m": 0.050,
+    "mergeGroups": true,
+    "tailpipeLength_m": 1.8,
+    "tailpipeDiameter_m": 0.065
   },
   "tables": {
     "ve": "tables/i6_30_na/ve.json",
