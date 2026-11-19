@@ -107,3 +107,33 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # Acceptance test of iteration 6: the real UI store talks to a real simcore over WebSocket.
+  e2e:
+    name: e2e (UI store against simcore)
+    runs-on: ubuntu-24.04
+    env:
+      CXX: g++-14
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Build simcore
+        run: |
+          cmake --preset debug
+          cmake --build --preset debug --target simcore
+
+      - name: Install UI
+        working-directory: ui
+        run: npm ci
+
+      # The test reconnects until simcore listens, so no explicit wait is needed.
+      - name: Run end-to-end test
+        run: |
+          ./build/debug/core/simcore &
+          cd ui && npm run test:e2e
