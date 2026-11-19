@@ -134,6 +134,14 @@ describe('tuneChanges', () => {
     expect(() => tuneChanges(tune, 'i6', current)).toThrow(TuneFileError);
   });
 
+  it('accepts axes that differ only by floating-point noise (simcore vs fake)', () => {
+    const tune = createTuneFile('i6', [ve], savedAt);
+    const saved = tune.tables.ve;
+    if (saved === undefined) throw new Error('missing');
+    saved.xBins = [1000.0000000000002, 2000];
+    expect(tuneChanges(tune, 'i6', current)).toEqual([]);
+  });
+
   it('rejects values outside the table limits', () => {
     const tune = createTuneFile(
       'i6',

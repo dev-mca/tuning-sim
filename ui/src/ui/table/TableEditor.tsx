@@ -16,6 +16,7 @@ import {
   setCells,
   smoothCells,
 } from '../../domain/tableEdit.ts';
+import { formatClean } from '../../domain/units.ts';
 import type { CellValue, TableData } from '../../protocol/messages.ts';
 import { useStore } from '../../state/StoreContext.ts';
 import { useAnimationFrame } from '../useAnimationFrame.ts';
@@ -313,8 +314,8 @@ function CellInfo({
   const decimals = editPrecision(table.id).decimals;
   return (
     <p className="font-mono text-xs text-muted tabular-nums">
-      {table.xAxis.bins[cell.x]} {table.xAxis.unit} · {table.yAxis.bins[cell.y]} {table.yAxis.unit}{' '}
-      ·{' '}
+      {formatClean(table.xAxis.bins[cell.x] ?? 0)} {table.xAxis.unit} ·{' '}
+      {formatClean(table.yAxis.bins[cell.y] ?? 0)} {table.yAxis.unit} ·{' '}
       <span className="text-ink">
         {value.toFixed(decimals)} {table.unit}
       </span>

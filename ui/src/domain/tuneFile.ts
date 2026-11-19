@@ -177,8 +177,23 @@ function isNumberArray(value: unknown): value is number[] {
   );
 }
 
+/**
+ * Relative tolerance for axis comparison: simcore's bins carry floating-point noise from the
+ * rad/s -> rpm conversion, the fake's do not; both describe the same table.
+ */
+const AXIS_TOLERANCE = 1e-9;
+
 function sameNumbers(a: readonly number[], b: readonly number[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
+  return (
+    a.length === b.length &&
+    a.every((value, index) => {
+      const other = b[index];
+      return (
+        other !== undefined &&
+        Math.abs(value - other) <= AXIS_TOLERANCE * Math.max(1, Math.abs(other))
+      );
+    })
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

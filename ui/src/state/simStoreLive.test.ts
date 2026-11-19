@@ -16,6 +16,7 @@ import { SimStore } from './simStore.ts';
  */
 class ScriptedSource implements SimSource {
   readonly kind = 'live';
+  readonly address = 'ws://test';
   readonly sent: ClientMessage[] = [];
   private messageListener: ((message: ServerMessage) => void) | null = null;
   private statusListener: ((status: ConnectionStatus) => void) | null = null;
@@ -137,7 +138,7 @@ describe('SimStore with a live source', () => {
     source.sent.length = 0;
 
     source.server({ type: 'error', id: request?.id, payload: { message: 'invalid cell' } });
-    expect(store.getSnapshot().lastError).toBe('invalid cell');
+    expect(store.getSnapshot().toast).toEqual({ tone: 'error', text: 'invalid cell' });
     expect(source.sentOfType('getTable').map((m) => m.payload.id)).toEqual(['ignition']);
 
     source.server({ type: 'table', payload: ORIGINAL });

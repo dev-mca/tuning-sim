@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import type { ConnectionStatus } from '../../sim/SimSource.ts';
+import type { ConnectionStatus, SourceKind } from '../../sim/SimSource.ts';
 import { useSnapshot, useStore } from '../../state/StoreContext.ts';
 import { useAnimationFrame } from '../useAnimationFrame.ts';
 
@@ -26,7 +26,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /** Bottom bar: pedal, throttle blip, connection state and the simulated clock. */
-export function ControlBar() {
+export function ControlBar({ onSourceChange }: { onSourceChange: (kind: SourceKind) => void }) {
   const store = useStore();
   const { status, sourceKind, hello, sweep } = useSnapshot();
   const [pedal, setPedal] = useState(0);
@@ -94,19 +94,61 @@ export function ControlBar() {
       </p>
       <div className="ml-auto flex items-center gap-3 font-mono text-xs text-muted">
         <span ref={clockRef} className="tabular-nums" />
-        {sourceKind === 'fake' && (
-          <span
-            className="rounded border border-warn/60 px-2 py-0.5 font-semibold text-warn"
-            title="Generated in the browser; simcore is not used yet (iteration 6 connects it)"
-          >
-            FAKE DATA
-          </span>
-        )}
+        <SourceSwitch value={sourceKind} onChange={onSourceChange} />
         <span className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1">
           <span className={`size-2 rounded-full ${statusStyle.dot}`} aria-hidden="true" />
           {hello?.engine.id ?? 'no engine'} · {statusStyle.text}
         </span>
       </div>
     </footer>
+  );
+}
+
+const SOURCE_OPTIONS: readonly { kind: SourceKind; label: string; title: string }[] = [
+  { kind: 'live', label: 'Live', title: 'Real simulation: simcore over WebSocket' },
+  { kind: 'fake', label: 'Fake', title: 'Generated in the browser, no simcore needed' },
+];
+
+/** Segmented switch between the real simulation and the in-browser fake. */
+function SourceSwitch({
+  value,
+  onChange,
+}: {
+  value: SourceKind;
+  onChange: (kind: SourceKind) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Data source"
+      className="flex rounded-md border border-line p-0.5"
+    >
+      {SOURCE_OPTIONS.map((option) => {
+        const active = option.kind === value;
+        return (
+          <button
+            key={option.kind}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            title={option.title}
+            onClick={() => {
+              if (!active) {
+                onChange(option.kind);
+              }
+            }}
+            className={`rounded px-2.5 py-0.5 font-semibold transition ${
+              active
+                ? option.kind === 'fake'
+                  ? 'bg-warn text-canvas'
+                  : 'bg-accent text-canvas'
+                : 'text-muted hover:text-ink'
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

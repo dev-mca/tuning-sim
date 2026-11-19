@@ -12,6 +12,8 @@ export type SourceKind = 'fake' | 'live';
  */
 export interface SimSource {
   readonly kind: SourceKind;
+  /** Human-readable location, e.g. the WebSocket URL; shown when the connection is down. */
+  readonly address: string;
   connect(): void;
   disconnect(): void;
   send(message: ClientMessage): void;

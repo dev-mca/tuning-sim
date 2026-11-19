@@ -48,7 +48,15 @@ export interface SimSnapshot {
   engineMode: { dynoMode: EngineState['dynoMode']; cutActive: boolean };
   canUndo: boolean;
   canRedo: boolean;
-  lastError: string | null;
+  /** Short message for the user: errors from the simulation or results such as "tune loaded". */
+  toast: Toast | null;
+  /** Where the source connects to, shown when the connection is down. */
+  sourceAddress: string;
+}
+
+export interface Toast {
+  tone: 'error' | 'info';
+  text: string;
 }
 
 const IDLE_SWEEP: SweepStatus = { active: false, progress: 0, rpm: 0 };
@@ -90,7 +98,8 @@ export class SimStore {
       engineMode: { dynoMode: 'free', cutActive: false },
       canUndo: false,
       canRedo: false,
-      lastError: null,
+      toast: null,
+      sourceAddress: source.address,
     };
   }
 
@@ -218,8 +227,12 @@ export class SimStore {
     this.update({ runs: removeRun(this.snapshot.runs, runId) });
   }
 
-  dismissError(): void {
-    this.update({ lastError: null });
+  notify(tone: Toast['tone'], text: string): void {
+    this.update({ toast: { tone, text } });
+  }
+
+  dismissToast(): void {
+    this.update({ toast: null });
   }
 
   // --- incoming messages -----------------------------------------------------------------
@@ -279,7 +292,7 @@ export class SimStore {
 
   /** A rejected table edit leaves the optimistic local copy wrong, so fetch the real table. */
   private handleError(message: string, request: PendingRequest | undefined): void {
-    this.update({ lastError: message });
+    this.notify('error', message);
     if (request?.type === 'setTableCells' && request.tableId !== undefined) {
       this.send({ type: 'getTable', payload: { id: request.tableId } });
     }

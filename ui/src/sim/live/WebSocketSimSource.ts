@@ -53,7 +53,7 @@ export interface WebSocketSimSourceOptions {
 export class WebSocketSimSource implements SimSource {
   readonly kind = 'live';
 
-  private readonly url: string;
+  readonly address: string;
   private readonly createSocket: WebSocketFactory;
   private readonly policy: ReconnectPolicy;
   private readonly onInvalidMessage: (reason: string) => void;
@@ -65,7 +65,7 @@ export class WebSocketSimSource implements SimSource {
   private wanted = false;
 
   constructor(options: WebSocketSimSourceOptions = {}) {
-    this.url = options.url ?? DEFAULT_SIMCORE_URL;
+    this.address = options.url ?? DEFAULT_SIMCORE_URL;
     this.createSocket = options.createSocket ?? ((url) => new WebSocket(url));
     this.policy = options.reconnect ?? DEFAULT_RECONNECT;
     this.retryDelay_ms = this.policy.initialDelay_ms;
@@ -74,10 +74,6 @@ export class WebSocketSimSource implements SimSource {
       ((reason) => {
         console.warn(`simcore: ignored invalid message (${reason})`);
       });
-  }
-
-  get address(): string {
-    return this.url;
   }
 
   connect(): void {
@@ -121,7 +117,7 @@ export class WebSocketSimSource implements SimSource {
     this.emitStatus('connecting');
     let socket: WebSocketLike;
     try {
-      socket = this.createSocket(this.url);
+      socket = this.createSocket(this.address);
     } catch {
       // e.g. an invalid URL; treat it like a failed connection attempt.
       this.scheduleReconnect();

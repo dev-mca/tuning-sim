@@ -50,6 +50,7 @@ const LABEL_RADIUS = 60;
 const NEEDLE_LENGTH = 78;
 const NEEDLE_TAIL = 14;
 const DEFAULT_TIME_CONSTANT_S = 0.06;
+const NO_DATA_TEXT = '—';
 
 const ZONE_COLOR: Record<ZoneTone, string> = {
   warn: 'var(--color-warn)',
@@ -72,7 +73,7 @@ export function RadialGauge(props: RadialGaugeProps) {
     minorPerMajor,
     zones = [],
     size = 'small',
-    nullText = '—',
+    nullText = NO_DATA_TEXT,
     timeConstant_s = DEFAULT_TIME_CONSTANT_S,
   } = props;
   const store = useStore();
@@ -118,7 +119,9 @@ export function RadialGauge(props: RadialGaugeProps) {
     );
     const zone = zones.find((z) => target !== null && target >= z.from && target <= z.to);
     if (readoutRef.current !== null) {
-      readoutRef.current.textContent = target === null ? nullText : props.format(smoothed.current);
+      // No state at all (not connected) is different from "no valid value" (e.g. lambda in cut).
+      readoutRef.current.textContent =
+        state === null ? NO_DATA_TEXT : target === null ? nullText : props.format(smoothed.current);
       readoutRef.current.dataset.zone = zone?.tone ?? 'none';
     }
     if (secondaryRef.current !== null && props.formatSecondary !== undefined) {

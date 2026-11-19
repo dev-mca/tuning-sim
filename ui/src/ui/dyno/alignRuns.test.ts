@@ -9,7 +9,7 @@ function run(rpm: number[], torque: number[]): DynoResultPayload {
     rpm,
     torque_Nm: torque,
     power_kW: zeros,
-    lambda: zeros,
+    lambda: rpm.map(() => null),
     map_kPa: zeros,
     ignition_deg: zeros,
     egt_C: zeros,
@@ -17,28 +17,43 @@ function run(rpm: number[], torque: number[]): DynoResultPayload {
   };
 }
 
+const torque = (result: DynoResultPayload) => result.torque_Nm;
+
 describe('alignRuns', () => {
-  it('builds the union of rpm points and fills gaps with null', () => {
+  it('interpolates runs with different measured speeds onto one x axis', () => {
+    const aligned = alignRuns(
+      [run([1000, 1100], [250, 260]), run([1050.5, 1150], [300, 310])],
+      torque,
+    );
+    expect(aligned.rpm).toEqual([1000, 1050.5, 1100, 1150]);
+    expect(aligned.values[0]?.[1]).toBeCloseTo(255.05, 9);
+    expect(aligned.values[1]?.[2]).toBeCloseTo(300 + (10 * 49.5) / 99.5, 9);
+  });
+
+  it('leaves values outside a run range empty', () => {
     const aligned = alignRuns(
       [run([1000, 1100], [250, 252]), run([1100, 1200], [260, 262])],
-      (result) => result.torque_Nm,
+      torque,
     );
-    expect(aligned.rpm).toEqual([1000, 1100, 1200]);
-    expect(aligned.values).toEqual([
-      [250, 252, null],
-      [null, 260, 262],
-    ]);
+    expect(aligned.values[0]?.[2]).toBeNull();
+    expect(aligned.values[1]?.[0]).toBeNull();
   });
 
   it('returns empty arrays without runs', () => {
-    expect(alignRuns([], (result) => result.torque_Nm)).toEqual({ rpm: [], values: [] });
+    expect(alignRuns([], torque)).toEqual({ rpm: [], values: [] });
+  });
+
+  it('keeps null values (e.g. lambda in fuel cut) as gaps', () => {
+    const aligned = alignRuns([run([1000, 1100], [1, 2])], (result) => result.lambda);
+    expect(aligned.values[0]).toEqual([null, null]);
   });
 });
 
 describe('valueAtRpm', () => {
-  it('reads a run at an rpm and returns null outside its range', () => {
+  it('interpolates inside the run and returns null outside', () => {
     const result = run([1000, 1100], [250, 252]);
-    expect(valueAtRpm(result, (r) => r.torque_Nm, 1100)).toBe(252);
-    expect(valueAtRpm(result, (r) => r.torque_Nm, 5000)).toBeNull();
+    expect(valueAtRpm(result, torque, 1100)).toBe(252);
+    expect(valueAtRpm(result, torque, 1050)).toBeCloseTo(251, 9);
+    expect(valueAtRpm(result, torque, 5000)).toBeNull();
   });
 });
