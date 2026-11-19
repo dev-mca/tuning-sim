@@ -230,7 +230,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 3 | Sound-Spike in C++ | P1 | Audio-DSP | ✅ |
 | 4 | simcore: MVM-Port, Tabellen, WebSocket | P1 | modernes C++ | ✅ |
 | 5 | UI: Cockpit mit Fake-Daten | P2 | React | ✅ |
-| 6 | UI ↔ simcore live | P2 | Integration | ⬜ |
+| 6 | UI ↔ simcore live | P2 | Integration | ✅ |
 | 7 | Sound an simcore koppeln | P1 | Echtzeit-Threads | ⬜ |
 | 8 | Turbo + Klopfen + Turbo-Sound | P2 | Regelungstechnik | ⬜ |
 | 9 | Kompressor/Supercharger | P2 | – | ⬜ |
@@ -298,6 +298,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Tabellenänderung → simcore → neuer Sweep → neue Kurve im Overlay.
 - Tune speichern/laden (JSON).
 **Abnahme:** Zelle in der Zündtabelle ändern, Sweep starten, Unterschied in der Kurve sehen.
+**Umgesetzt (2026-11-19):** ADR 0006. `WebSocketSimSource` (Reconnect mit Backoff, Prüfung jedes Frames), Umschalter Live/Fake (URL `?source=`, sonst letzte Wahl, sonst Live), Hinweis mit Startbefehl, wenn simcore nicht erreichbar ist. Store gleicht nach jedem `hello` neu ab (Tabellen, Pedal) und holt bei abgelehntem `setTableCells` die Tabelle neu. Tune speichern/laden/zurücksetzen in der UI als JSON (`tuning-sim-tune` v1, Achsen werden geprüft), Laden ist ein Undo-Schritt; `saveTune`/`loadTune` im Protokoll entfallen dafür. Jeder Dyno-Lauf zeigt, welcher Tune ihn erzeugt hat. Gemessene Drehzahlen der Läufe werden für das Overlay interpoliert. Abnahme automatisiert: `npm run test:e2e` gegen echtes simcore (auch in CI), Zündung −5° → 304,1 → 296,4 Nm. 150 UI-Tests plus 2 End-to-End-Tests.
 
 ### Iteration 7 – Sound an simcore koppeln
 - Akustik aus dem Spike als `acoustic/`-Modul in simcore, Parameter aus der Simulation (`AcousticParams`).
@@ -362,6 +363,9 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Logging und Log-Viewer (wie MegaLogViewer)
 - Auto-Tune der VE-Tabelle aus simulierten Lambda-Messungen
 - WebAssembly-Web-Demo
+- simcore liefert den Basis-Tune (aus `shared/tables`) mit, damit «Original» in der UI nicht vom Stand beim Verbinden abhängt (ADR 0006)
+- WebSocket-Server in simcore: `Origin`-Header prüfen (nur UI/Tauri zulassen), damit fremde Webseiten im Browser simcore nicht steuern können (ADR 0006)
+- Tabellen-Achsen in simcore auf z. B. 6 Dezimalen runden (rad/s → 1/min erzeugt 1100,0000000000002)
 - Realistisches Abgassystem implementieren (von Krümmer bis Endtopf alle Komponenten)
 - Neue Werte wie Katalysatortemperatur (Motor dreht beim Kaltstart etwas höher beim idle, um den Kat schnell warm zu bekommen, darum hört sich das auto cooler an)
 - Schubabschaltung abstellen und dann sollte es beim warmen Kat knallen, burblen usw. 

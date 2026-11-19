@@ -1,6 +1,6 @@
 # interface.md – WebSocket-Protokoll v1 (simcore ↔ UI)
 
-Stand: Iteration 4. Implementierung: `core/src/adapters/protocol.cpp` (Codec) und
+Stand: Iteration 6 (Protokoll unverändert seit Iteration 4). Implementierung: `core/src/adapters/protocol.cpp` (Codec) und
 `core/src/adapters/websocket_server.cpp` (Transport). Testclient: `core/tools/ws_test.html`.
 
 ## Verbindung
@@ -102,5 +102,14 @@ Inkompatible Änderungen (Felder umbenennen oder entfernen, Einheiten ändern) e
 
 ## Geplant (spätere Iterationen)
 
-`setDynoMode` (holdRpm), `loadEngine`, `saveTune`/`loadTune` (Iteration 6), `setAudio` (7),
-`shift`/`setClutch` (10).
+`setDynoMode` (holdRpm), `loadEngine`, `setAudio` (7), `shift`/`setClutch` (10).
+Tunes speichert und lädt die UI selbst (ADR 0006); beim Laden sendet sie die abweichenden Zellen
+per `setTableCells`, ein eigenes `saveTune`/`loadTune` ist daher nicht vorgesehen.
+
+## Verhalten des UI-Clients (Iteration 6)
+
+- Reconnect mit Backoff 0,5 → 1 → 2 → 4 → 5 s; Befehle ohne Verbindung werden verworfen.
+- Nach jedem `hello` holt die UI alle Tabellen mit `getTable` und sendet das Pedal erneut.
+- Auf ein `error` zu `setTableCells` holt die UI die betroffene Tabelle neu.
+- Ungültige Frames (kein JSON, falsche Version, fehlende Pflichtfelder) werden verworfen und
+  in der Browser-Konsole gemeldet.

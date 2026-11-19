@@ -16,6 +16,7 @@ export default defineConfig({
     fs: { allow: [searchForWorkspaceRoot(process.cwd()), sharedDir] },
   },
   test: {
-    include: ['src/**/*.test.ts'],
+    // End-to-end tests need a running simcore; `npm run test:e2e` selects them instead.
+    include: process.env.TEST_E2E === '1' ? ['src/**/*.e2e.ts'] : ['src/**/*.test.ts'],
   },
 });
