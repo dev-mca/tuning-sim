@@ -25,6 +25,12 @@
   "idle_rpm": 750,
   "revLimit_rpm": 7000,
   "revLimitHysteresis_rpm": 100,
+  "overrunFuelCut": {
+    "_assumption": "Typical deceleration fuel cut: throttle closed and speed above enter_rpm cuts fuel; fuel returns below exit_rpm (above idle, so the engine does not stall) or when the throttle opens (research.md §3.3).",
+    "enter_rpm": 1500,
+    "exit_rpm": 1100,
+    "closedThrottle": 0.02
+  },
   "inertia_kg_m2": 0.20,
   "_assumption_inertia": "Crank train plus dual-mass flywheel, research.md §2.11 gives 0.15-0.25 kg m^2.",
   "intake": {

@@ -3,12 +3,13 @@
 Concepts as in Speeduino/rusEFI (no code taken from them, they are GPL):
 load = MAP, read VE / lambda target / ignition from tables, compute the fuel mass.
 Rev limiter: hard fuel cut with hysteresis.
+Overrun (deceleration) fuel cut: throttle closed above a speed threshold (research.md §3.3).
 """
 
 from dataclasses import dataclass
 
 from tuning_lab.constants import AFR_STOICH_GASOLINE
-from tuning_lab.engine_definition import EngineTables
+from tuning_lab.engine_definition import EngineTables, OverrunCutParameters
 from tuning_lab.mvm import air_density_kg_m3
 from tuning_lab.table import Table2D
 
@@ -45,20 +46,28 @@ class Ecu:
         displacement_m3: float,
         rev_limit_rad_s: float,
         rev_limit_hysteresis_rad_s: float,
+        overrun_cut: OverrunCutParameters,
     ) -> None:
         self._tune = tune
         self._displacement_m3 = displacement_m3
         self._rev_limit_rad_s = rev_limit_rad_s
         self._rev_resume_rad_s = rev_limit_rad_s - rev_limit_hysteresis_rad_s
-        self._fuel_cut = False
+        self._overrun = overrun_cut
+        self._limiter_cut = False
+        self._overrun_cut = False
 
     def update(
-        self, speed_rad_s: float, manifold_pressure_pa: float, intake_temperature_k: float
+        self,
+        speed_rad_s: float,
+        manifold_pressure_pa: float,
+        intake_temperature_k: float,
+        throttle: float,
     ) -> EcuCommand:
         self._update_rev_limiter(speed_rad_s)
+        self._update_overrun_cut(speed_rad_s, throttle)
         lambda_target = self._tune.lambda_target.lookup(speed_rad_s, manifold_pressure_pa)
         ignition_deg = self._tune.ignition.lookup(speed_rad_s, manifold_pressure_pa)
-        if self._fuel_cut:
+        if self._limiter_cut or self._overrun_cut:
             return EcuCommand(0.0, ignition_deg, lambda_target, fuel_cut=True)
 
         # §2.2 + §2.4: the ECU's belief of the air mass, then fuel for the target lambda.
@@ -74,6 +83,15 @@ class Ecu:
     def _update_rev_limiter(self, speed_rad_s: float) -> None:
         # Hysteresis: cut above the limit, resume only after dropping below limit - hysteresis.
         if speed_rad_s > self._rev_limit_rad_s:
-            self._fuel_cut = True
+            self._limiter_cut = True
         elif speed_rad_s < self._rev_resume_rad_s:
-            self._fuel_cut = False
+            self._limiter_cut = False
+
+    def _update_overrun_cut(self, speed_rad_s: float, throttle: float) -> None:
+        # Cut when coasting with closed throttle; resume below the exit speed (before idle,
+        # so the engine catches itself) or as soon as the driver opens the throttle.
+        closed = throttle <= self._overrun.closed_throttle
+        if not closed or speed_rad_s < self._overrun.exit_rad_s:
+            self._overrun_cut = False
+        elif speed_rad_s > self._overrun.enter_rad_s:
+            self._overrun_cut = True
