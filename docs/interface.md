@@ -1,6 +1,6 @@
 # interface.md – WebSocket-Protokoll v1 (simcore ↔ UI)
 
-Stand: Iteration 7 (neu: `setAudio`, `hello.audio`). Implementierung: `core/src/adapters/protocol.cpp` (Codec) und
+Stand: Iteration 7b (neu: `setAudio`, `hello.audio`, Schub-Einstellungen, `catalyst_C`). Implementierung: `core/src/adapters/protocol.cpp` (Codec) und
 `core/src/adapters/websocket_server.cpp` (Transport). Testclient: `core/tools/ws_test.html`.
 
 ## Verbindung
@@ -37,6 +37,8 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
 | `getTable` | `{ "id": "ve" }` (`ve`, `lambdaTarget`, `ignition`, `ignitionMbt`) | `table` oder `error` |
 | `setTableCells` | `{ "id": "ignition", "cells": [ { "x": 3, "y": 10, "value": 28.5 } ] }` | `ack` oder `error` |
 | `setAudio` | `{ "volume": 0.0..1.0, "mute": false }` (volume wird geklemmt, `mute` optional) | `ack` (auch ohne Audiogerät) |
+| `getOverrunSettings` | `{}` | `overrunSettings` |
+| `setOverrunSettings` | `{ "fuelCut": false, "retard_deg": 35, "enrichment_pct": 10 }` (retard 0..60, enrichment 0..50) | `ack` oder `error`; danach `overrunSettings` an alle |
 
 - `x`/`y` sind Indizes (Spalte = Drehzahl-Bin, Zeile = MAP-Bin), `value` in der Einheit der Tabelle.
 - `setTableCells` gilt ganz oder gar nicht: Ist eine Zelle ungültig, wird nichts geändert.
@@ -68,6 +70,15 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
 ```
 `dynoMode`: `free` (Motor läuft ohne Bremse) oder `sweep`. `torque_Nm` ist das effektive Moment
 des Motors, `cutActive` meldet eine aktive Kraftstoffabschaltung (Drehzahlbegrenzer oder Schubabschaltung).
+Seit Iteration 7b zusätzlich `catalyst_C` (Kat-Temperatur) und `overrunFueling` (die ECU spritzt im
+Schub ein, weil die Schubabschaltung aus ist: Pops möglich).
+
+### `overrunSettings` (Antwort auf `getOverrunSettings`, Broadcast nach `setOverrunSettings`)
+```json
+{ "v": 1, "type": "overrunSettings", "payload": { "fuelCut": true, "retard_deg": 0, "enrichment_pct": 0 } }
+```
+`fuelCut` = Schubabschaltung (Serie: an). Ist sie aus, spritzt die ECU im Schub weiter ein, zündet um
+`retard_deg` später als das Kennfeld und gibt `enrichment_pct` mehr Kraftstoff (research.md §3.3, §2.10a).
 
 ### `table` (Antwort auf `getTable`)
 Gleiches Format wie die Dateien in `shared/tables/` (plan.md §5.1), dazu `editable`:
@@ -113,7 +124,8 @@ per `setTableCells`, ein eigenes `saveTune`/`loadTune` ist daher nicht vorgesehe
 ## Verhalten des UI-Clients (Iteration 6)
 
 - Reconnect mit Backoff 0,5 → 1 → 2 → 4 → 5 s; Befehle ohne Verbindung werden verworfen.
-- Nach jedem `hello` holt die UI alle Tabellen mit `getTable` und sendet Pedal und `setAudio` erneut.
+- Nach jedem `hello` holt die UI alle Tabellen mit `getTable`, fragt `getOverrunSettings` und sendet Pedal und `setAudio` erneut.
+- Auf ein `error` zu `setOverrunSettings` fragt die UI die Einstellungen neu ab.
 - Auf ein `error` zu `setTableCells` holt die UI die betroffene Tabelle neu.
 - Ungültige Frames (kein JSON, falsche Version, fehlende Pflichtfelder) werden verworfen und
   in der Browser-Konsole gemeldet.

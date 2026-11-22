@@ -232,6 +232,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 5 | UI: Cockpit mit Fake-Daten | P2 | React | ✅ |
 | 6 | UI ↔ simcore live | P2 | Integration | ✅ |
 | 7 | Sound an simcore koppeln | P1 | Echtzeit-Threads | ✅ |
+| 7b | Pops & Bangs im Schub (vorgezogen aus 10) | P1 | – | ✅ |
 | 8 | Turbo + Klopfen + Turbo-Sound | P2 | Regelungstechnik | ⬜ |
 | 9 | Kompressor/Supercharger | P2 | – | ⬜ |
 | 10 | Antriebsstrang, Rollenprüfstand, Launch/Flat Shift/Pops | P3 | – | ⬜ |
@@ -307,6 +308,14 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 **Abnahme:** Vollgas-Sweep tönt glaubwürdig; Spätzündung tönt hörbar matter; kein Knacksen bei Lastwechseln.
 **Umgesetzt (2026-11-22):** ADR 0007. Akustik und DSP als Bibliothek `simcore_acoustic` (Spike nutzt sie mit). Simulation → `AcousticParams` (Füllung, Spätzündung gegen MBT, λ, Kraftstoffabschaltung) → Port `IAcousticSink` → Triple Buffer → miniaudio-Callback (`SoundRenderer`, `AudioOutput`). Spätzündung macht die Pulse weicher (10° spät: Spektralschwerpunkt −16 bis −20 %, Pegel ±3 dB). Mageres Gemisch klingt rauer. Zusätzlich nötig: **Schubabschaltung** in der ECU (Lab + C++, Golden unverändert) und Abgasgeometrie in der Motordatei. `setAudio` + `hello.audio`, Lautstärke/Mute in der UI (Taste M). `simcore --sound-sweep out.wav [--ignition-offset -10]` rendert einen Sweep offline, `--no-audio` für CI. Abnahme gemessen in `core/tests/sound_acceptance_test.cpp` (Klickfreiheit, Helligkeit, Pegel). 93 C++-, 64 Lab-, 154 UI-Tests. «Glaubwürdig» muss der Nutzer noch anhören.
 
+### Iteration 7b – Pops & Bangs im Schub (vorgezogen aus Iteration 10, Wunsch des Nutzers)
+- Schub-Einstellungen im Tune: Schubabschaltung ein/aus, Schub-Spätzündung, Schub-Anfettung.
+- Nachverbrennung und Katalysatortemperatur (research.md §2.10a), zuerst Lab, dann C++.
+- Knaller und Knistern im Sound, abhängig von Einspritzung im Schub, Spätzündung und Kat-Temperatur.
+- UI-Panel «Overrun», Einstellungen in der Tune-Datei.
+**Abnahme:** Serie still im Schub; Schubabschaltung aus → Blubbern; Pops-Tune knallt, warmer Kat knallt mehr; Remap hörbar.
+**Umgesetzt (2026-11-22):** ADR 0008. Neues Golden File `i6_30_na_overrun.csv` (C++ bitgenau, Vollgas-Golden unverändert). `getOverrunSettings`/`setOverrunSettings`, `state.catalyst_C`/`overrunFueling`. `simcore --sound-blips out.wav [--no-overrun-cut --overrun-retard 35 --overrun-enrichment 0.1]`. Gemessen: Pops-Tune im Schub ~10 dB lauter als Serie mit einzelnen Bangs, zweiter Schub (heisserer Kat) lauter als der erste. 111 C++-, 71 Lab-, 160 UI-Tests.
+
 ### Iteration 8 – Turbo, Klopfen, Turbo-Sound
 - Verdichter-/Turbinenmodell, Wellendynamik, Wastegate (Open Loop + PID auf `boostTarget`), Ladeluftkühler, Abgasgegendruck.
 - Klopfmodell (Livengood-Wu mit Douaud-Eyzat) und Klopfregelung (Zündrücknahme).
@@ -323,7 +332,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 
 ### Iteration 10 – Antriebsstrang, Rollenprüfstand, Tuning-Funktionen
 - Getriebe, Achse, Kupplung, Fahrzeugmodell, Rollenprüfstand-Modus, Schalten per Tastatur/UI.
-- ECU: Launch Control, Flat Shift (Zündunterbrechung), Pops & Bangs im Schub.
+- ECU: Launch Control, Flat Shift (Zündunterbrechung). (Pops & Bangs im Schub: erledigt in 7b, hier ggf. als Tabelle über der Drehzahl.)
 - Sound: Drehzahlabfall beim Schalten, Fehlzündungen.
 **Abnahme:** Durchzug im 4. Gang auf der Rolle; Launch und Flat Shift hörbar.
 
@@ -368,6 +377,8 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - WebSocket-Server in simcore: `Origin`-Header prüfen (nur UI/Tauri zulassen), damit fremde Webseiten im Browser simcore nicht steuern können (ADR 0006)
 - Audio-Ausgabegerät in der UI wählbar machen (simcore spielt auf dem System-Standardgerät, ADR 0007)
 - Ansaug- und Mechanikgeräusch (research.md §6.5) sowie gemessene/entworfene Schalldämpfer-IR (§6.4)
+- Abgastemperatur-Modell (research.md §2.10) im Leerlauf und bei sehr später Zündung zu hoch (~1000–1400 °C statt 400–900 °C): η_cool lastabhängig machen; ändert das Golden File (ADR 0008)
+- Kaltstart: Kat startet kalt, ECU hebt den Leerlauf an und zündet spät, bis der Kat warm ist (Nutzer-Idee, Physik in research.md §2.10a vorhanden)
 - Tabellen-Achsen in simcore auf z. B. 6 Dezimalen runden (rad/s → 1/min erzeugt 1100,0000000000002)
 - Realistisches Abgassystem implementieren (von Krümmer bis Endtopf alle Komponenten)
 - Neue Werte wie Katalysatortemperatur (Motor dreht beim Kaltstart etwas höher beim idle, um den Kat schnell warm zu bekommen, darum hört sich das auto cooler an)

@@ -25,7 +25,8 @@ address goes into `ui/.env.local` as `VITE_SIMCORE_URL=ws://127.0.0.1:47801`.
 cd ui && npm run test:e2e         # retard ignition by 5 deg, check that torque drops
 ```
 
-Tunes are saved and loaded with the buttons at the top right (JSON, ADR 0006).
+Tunes are saved and loaded with the buttons at the top right (JSON, ADR 0006); they include
+the overrun settings of the "Overrun · pops & bangs" panel (ADR 0008).
 
 ## Structure (iterations 5 and 6, ADR 0005/0006)
 
