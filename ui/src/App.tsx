@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { createSource, initialSourceKind, rememberSourceKind } from './sim/createSource.ts';
 import type { SourceKind } from './sim/SimSource.ts';
+import { loadAudioPreference } from './state/audioPreference.ts';
 import { SimStore } from './state/simStore.ts';
 import { StoreContext, useSnapshot } from './state/StoreContext.ts';
 import { ControlBar } from './ui/controls/ControlBar.tsx';
@@ -18,7 +19,10 @@ import { TablePanel } from './ui/table/TablePanel.tsx';
  */
 export function App() {
   const [sourceKind, setSourceKind] = useState<SourceKind>(() => initialSourceKind());
-  const store = useMemo(() => new SimStore(createSource(sourceKind)), [sourceKind]);
+  const store = useMemo(
+    () => new SimStore(createSource(sourceKind), loadAudioPreference()),
+    [sourceKind],
+  );
 
   useEffect(() => {
     store.start();

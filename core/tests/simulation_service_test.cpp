@@ -45,6 +45,23 @@ public:
     StateSnapshot lastState;
 };
 
+/// Records what the service hands to the sound.
+class FakeSound final : public IAcousticSink {
+public:
+    void publish(const acoustic::AcousticParams& params) override {
+        last = params;
+        ++published;
+    }
+    void setOutput(double newVolume, bool newMuted) override {
+        volume = newVolume;
+        muted = newMuted;
+    }
+    acoustic::AcousticParams last;
+    int published = 0;
+    double volume = -1.0;
+    bool muted = false;
+};
+
 void runSteps(SimulationService& service, int steps) {
     for (int i = 0; i < steps; ++i) {
         service.step();
@@ -140,4 +157,31 @@ TEST_CASE("an invalid sweep is answered with an error") {
     service.step();
     CHECK(bus.count<ErrorReply>() == 1);
     CHECK(bus.lastState.dynoMode == DynoMode::Free);
+}
+
+TEST_CASE("every step hands the acoustic parameters to the sound") {
+    FakeBus bus;
+    FakeSound sound;
+    SimulationService service(test::referenceEngine(), bus, bus, &sound);
+    runSteps(service, 50);
+    CHECK(sound.published == 50);
+    CHECK(sound.last.speed_rad_s == doctest::Approx(bus.lastState.speed_rad_s));
+    CHECK(sound.last.chargeRatio > 0.0);
+}
+
+TEST_CASE("setAudio reaches the sound and is acknowledged, also without sound") {
+    FakeBus bus;
+    FakeSound sound;
+    SimulationService withSound(test::referenceEngine(), bus, bus, &sound);
+    bus.push(SetAudio{0.4, true});
+    runSteps(withSound, 1);
+    CHECK(sound.volume == doctest::Approx(0.4));
+    CHECK(sound.muted);
+    CHECK(bus.count<Ack>() == 1);
+
+    FakeBus silentBus;
+    SimulationService withoutSound(test::referenceEngine(), silentBus, silentBus);
+    silentBus.push(SetAudio{0.4, false});
+    runSteps(withoutSound, 1);
+    CHECK(silentBus.count<Ack>() == 1);
 }

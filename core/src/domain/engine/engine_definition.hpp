@@ -51,6 +51,26 @@ struct EngineTables {
     Table2D ignitionMbt;
 };
 
+/// Deceleration fuel cut (Schubabschaltung, research.md §3.3).
+struct OverrunCutParameters {
+    double enter_rad_s = 0.0;
+    double exit_rad_s = 0.0;
+    double closedThrottle = 0.0; // throttle positions at or below this count as closed
+};
+
+/// Exhaust pipes as far as the sound model needs them (research.md §6.3, plan.md §5.2).
+/// Cylinder numbers in collectorGroups are 1-based, like the firing order.
+struct ExhaustGeometry {
+    std::vector<double> primaryLength_m; // one per cylinder (index = cylinder - 1)
+    double primaryDiameter_m = 0.0;
+    std::vector<std::vector<int>> collectorGroups;
+    double collectorLength_m = 0.0;
+    double collectorDiameter_m = 0.0;
+    bool mergeGroups = true; // Y-piece into one tailpipe, otherwise one outlet per group
+    double tailpipeLength_m = 0.0;
+    double tailpipeDiameter_m = 0.0;
+};
+
 struct EngineDefinition {
     std::string id;
     std::string name;
@@ -70,6 +90,8 @@ struct EngineDefinition {
     double accessoryTorque_Nm;
     double exhaustBackpressureCoefficient;
     EngineTables tables;
+    ExhaustGeometry exhaustGeometry;
+    OverrunCutParameters overrunCut;
 
     /// V_d = z pi/4 B^2 S (research.md §1.4).
     [[nodiscard]] double displacement_m3() const noexcept {

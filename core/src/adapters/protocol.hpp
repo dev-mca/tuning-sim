@@ -24,7 +24,8 @@ struct DecodeResult {
 
 class ProtocolCodec {
 public:
-    explicit ProtocolCodec(const LoadedEngine& engine);
+    /// `audio` is announced in hello, so the UI knows whether sound can play.
+    explicit ProtocolCodec(const LoadedEngine& engine, AudioInfo audio = {});
 
     [[nodiscard]] DecodeResult decode(std::string_view text, const std::string& clientId) const;
 
@@ -44,6 +45,7 @@ private:
     double idleSpeed_rad_s_;
     double revLimit_rad_s_;
     std::vector<TableDescriptor> tables_;
+    AudioInfo audio_;
 };
 
 } // namespace simcore

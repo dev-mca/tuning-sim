@@ -135,5 +135,5 @@ jobs:
       # The test reconnects until simcore listens, so no explicit wait is needed.
       - name: Run end-to-end test
         run: |
-          ./build/debug/core/simcore &
+          ./build/debug/core/simcore --no-audio &
           cd ui && npm run test:e2e

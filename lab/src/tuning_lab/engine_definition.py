@@ -54,6 +54,16 @@ class EngineTables:
 
 
 @dataclass(frozen=True)
+class OverrunCutParameters:
+    """Deceleration fuel cut (Schubabschaltung, research.md §3.3)."""
+
+    enter_rad_s: float
+    exit_rad_s: float
+    closed_throttle: float
+    """Throttle positions at or below this count as closed."""
+
+
+@dataclass(frozen=True)
 class EngineDefinition:
     id: str
     name: str
@@ -73,6 +83,7 @@ class EngineDefinition:
     accessory_torque_nm: float
     exhaust_backpressure_coefficient: float
     tables: EngineTables
+    overrun_cut: OverrunCutParameters
 
     @property
     def displacement_m3(self) -> float:
@@ -138,5 +149,10 @@ def _engine_from_dict(data: dict[str, Any], shared_dir: Path) -> EngineDefinitio
             lambda_target=load_table_si(shared_dir / tables["lambdaTarget"]),
             ignition=load_table_si(shared_dir / tables["ignition"]),
             ignition_mbt=load_table_si(shared_dir / tables["ignitionMbt"]),
+        ),
+        overrun_cut=OverrunCutParameters(
+            enter_rad_s=units.rpm_to_rad_s(float(data["overrunFuelCut"]["enter_rpm"])),
+            exit_rad_s=units.rpm_to_rad_s(float(data["overrunFuelCut"]["exit_rpm"])),
+            closed_throttle=float(data["overrunFuelCut"]["closedThrottle"]),
         ),
     )

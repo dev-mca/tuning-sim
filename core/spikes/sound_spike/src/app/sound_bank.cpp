@@ -1,6 +1,6 @@
 #include "app/sound_bank.hpp"
 
-#include "io/offline_render.hpp"
+#include "acoustic/offline_render.hpp"
 
 #include <algorithm>
 

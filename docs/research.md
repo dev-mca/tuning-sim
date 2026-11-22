@@ -215,6 +215,7 @@ In echten ECUs (Speeduino) sind VE und Zündung typischerweise 16 × 16 Tabellen
 - **Boost-Regelung:** Open Loop (Duty-Tabelle) + PID auf das Boost-Ziel. Ein falsch eingestellter PID schwingt, genau das soll man sehen können.
 - **Klopfregelung:** bei Klopfen Zündung pro Ereignis um z. B. 1,5–3° zurücknehmen, danach langsam wieder heranführen.
 - **Drehzahlbegrenzer:** harte Kraftstoffabschaltung oder Zündunterbrechung (klingt anders: Zündunterbrechung schickt unverbranntes Gemisch in den Auspuff → Knallen).
+- **Schubabschaltung (DFCO):** Drosselklappe geschlossen und Drehzahl über einer Einschaltschwelle → kein Kraftstoff. Wieder an unter einer Wiedereinsetzschwelle oberhalb des Leerlaufs (sonst stirbt der Motor ab) oder sobald Gas gegeben wird. Typisch: ein ~1500/min, aus ~1100/min. Spart Kraftstoff und bremst; im Sound bleiben nur schwache Pumpstösse.
 
 ### 3.4 Tuning-Funktionen (ab Iteration 10)
 - **Launch Control:** im Stand Drehzahlbegrenzer auf N_launch (z. B. 4000/min) mit Zündverstellung nach spät; mit Turbo baut sich so Ladedruck auf.
@@ -320,6 +321,8 @@ Im Audio-Thread mit f_s = 48 kHz:
 3. **Impulsamplitude** A_k aus dem MVM: proportional zum Zylinderdruck bei EVO, näherungsweise ∝ Luftmasse pro Zylinder × Faktor, der bei Spätzündung steigt (heisseres, druckreicheres Abgas) und bei Zündaussetzer/Schub sinkt. Kleine Zufallsschwankung (±3–8 %) und Zeitjitter (≈ ±0,5° KW) für Natürlichkeit (zyklische Verbrennungsschwankungen).
 4. **Impulsform:** kurz und **bandbegrenzt**, damit keine Aliasing-Artefakte entstehen. Varianten: Hann-Fenster-Puls der Dauer ≈ 1,5–3 ms (skaliert mit Drehzahl), gedämpfte Sinusschwingung, oder ein vorberechneter, gefilterter Impuls aus einer Tabelle (Wavetable). Harte Rechteckimpulse vermeiden.
 5. Impuls in die Verzögerungsleitung des zugehörigen Krümmerrohrs einspeisen (§6.3).
+
+**Umsetzung (Iteration 7, ADR 0007):** Amplitude ∝ Füllung (Luftmasse pro Arbeitsspiel relativ zu VE = 1 bei Umgebung), +1 %/° Spätzündung. Spätzündung macht die Pulse zudem weicher (länger, flacherer Anstieg) und senkt den Tiefpass: Die späte, langsamere Verbrennung lässt den Druck bei EVO weniger abrupt ansteigen. Nur den Tiefpass zu senken, reicht nicht, weil die hörbare Energie in den Harmonischen unter ~1,5 kHz liegt. λ > 1,05 erhöht die Zyklusschwankung (rauer). Bei Kraftstoffabschaltung bleiben schwache, dumpfe Pumpstösse.
 
 ### 6.3 Auspuff als digitaler Wellenleiter
 Schall breitet sich in einem Rohr als Welle mit Schallgeschwindigkeit c aus:

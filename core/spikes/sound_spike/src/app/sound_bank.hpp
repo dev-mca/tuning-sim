@@ -2,6 +2,7 @@
 
 #include "acoustic/engine_sound.hpp"
 #include "acoustic/layout.hpp"
+#include "app/acoustic_names.hpp"
 
 #include <array>
 #include <atomic>

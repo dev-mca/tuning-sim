@@ -57,6 +57,7 @@ class EngineSimulation:
             definition.displacement_m3,
             definition.rev_limit_rad_s,
             definition.rev_limit_hysteresis_rad_s,
+            definition.overrun_cut,
         )
         self._time_step_s = time_step_s
         self._time_s = 0.0
@@ -82,7 +83,7 @@ class EngineSimulation:
         """Advances the simulation by one time step."""
         dt = self._time_step_s
         command = self._ecu.update(
-            self._speed_rad_s, self._manifold_pressure_pa, self._manifold_temperature_k
+            self._speed_rad_s, self._manifold_pressure_pa, self._manifold_temperature_k, throttle
         )
         self._integrate_manifold(throttle, dt)
         outputs = self._model.evaluate(

@@ -9,6 +9,7 @@ import {
 } from '../domain/tuneFile.ts';
 import {
   type CellValue,
+  type AudioSettings,
   type ClientMessage,
   type DynoResultPayload,
   type EngineState,
@@ -52,6 +53,8 @@ export interface SimSnapshot {
   toast: Toast | null;
   /** Where the source connects to, shown when the connection is down. */
   sourceAddress: string;
+  /** The user's sound settings; sent to simcore after every hello. */
+  audio: AudioSettings;
 }
 
 export interface Toast {
@@ -60,6 +63,8 @@ export interface Toast {
 }
 
 const IDLE_SWEEP: SweepStatus = { active: false, progress: 0, rpm: 0 };
+
+export const DEFAULT_AUDIO: AudioSettings = { volume: 0.7, mute: false };
 
 /** What a request was about, so an error reply can be handled (e.g. re-fetch a table). */
 interface PendingRequest {
@@ -85,7 +90,7 @@ export class SimStore {
   private sweepTune: string | null = null;
   private readonly pending = new Map<string, PendingRequest>();
 
-  constructor(source: SimSource) {
+  constructor(source: SimSource, audio: AudioSettings = DEFAULT_AUDIO) {
     this.source = source;
     this.snapshot = {
       sourceKind: source.kind,
@@ -100,6 +105,7 @@ export class SimStore {
       canRedo: false,
       toast: null,
       sourceAddress: source.address,
+      audio,
     };
   }
 
@@ -141,6 +147,12 @@ export class SimStore {
   setPedal(value: number): void {
     this.pedal = value;
     this.send({ type: 'setPedal', payload: { value } });
+  }
+
+  setAudio(audio: AudioSettings): void {
+    const volume = Math.min(Math.max(audio.volume, 0), 1);
+    this.update({ audio: { volume, mute: audio.mute } });
+    this.send({ type: 'setAudio', payload: { volume, mute: audio.mute } });
   }
 
   startSweep(request: StartSweepPayload): void {
@@ -279,7 +291,7 @@ export class SimStore {
 
   /**
    * After every (re)connect the simulation is the source of truth: fetch all tables again and
-   * repeat the pedal, which may have been lost while the connection was down.
+   * repeat the pedal and the sound settings, which may have been lost while disconnected.
    */
   private handleHello(hello: HelloPayload): void {
     const engineChanged = this.snapshot.hello?.engine.id !== hello.engine.id;
@@ -288,6 +300,7 @@ export class SimStore {
       this.send({ type: 'getTable', payload: { id: table.id } });
     }
     this.send({ type: 'setPedal', payload: { value: this.pedal } });
+    this.send({ type: 'setAudio', payload: this.snapshot.audio });
   }
 
   /** A rejected table edit leaves the optimistic local copy wrong, so fetch the real table. */

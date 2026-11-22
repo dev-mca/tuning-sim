@@ -1,7 +1,7 @@
 #include "app/audio_device.hpp"
 
+#include "acoustic/offline_render.hpp"
 #include "app/sound_bank.hpp"
-#include "io/offline_render.hpp"
 
 #include <miniaudio.h>
 

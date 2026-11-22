@@ -3,7 +3,8 @@
 // Command line of simcore (docs/plan.md iteration 4):
 //   simcore                                  serve the WebSocket API (default)
 //   simcore --engine i6_30_na --sweep 1000 7000 [--rate 300]   dyno sweep as CSV on stdout
-// Options: --engine <id>, --shared <dir>, --port <n>, --version, --help.
+//   simcore --sound-sweep out.wav [--ignition-offset -10]       engine sound of a sweep as WAV
+// Options: --engine <id>, --shared <dir>, --port <n>, --no-audio, --version, --help.
 
 #include <optional>
 #include <string>
@@ -11,7 +12,11 @@
 
 namespace simcore {
 
-enum class CliMode { Serve, Sweep, Version, Help };
+enum class CliMode { Serve, Sweep, SoundSweep, Version, Help };
+
+/// Range of --sound-sweep: the full speed range of the reference engine.
+inline constexpr double kSoundSweepFrom_rpm = 1000.0;
+inline constexpr double kSoundSweepTo_rpm = 7000.0;
 
 struct CliOptions {
     CliMode mode = CliMode::Serve;
@@ -21,6 +26,9 @@ struct CliOptions {
     double sweepFrom_rpm = 0.0;
     double sweepTo_rpm = 0.0;
     std::optional<double> sweepRate_rpm_s;
+    bool audio = true;          // false with --no-audio (CI, tests, machines without sound)
+    std::string soundSweepFile; // target of --sound-sweep
+    double ignitionOffset_deg = 0.0;
 };
 
 struct CliParseResult {

@@ -97,6 +97,31 @@ TEST_CASE("rev limiter keeps a free-revving engine below 7100 1/min") {
     CHECK(maxSpeed_rpm < 7100.0);
 }
 
+TEST_CASE("lifting off at high speed cuts fuel until shortly above idle (research.md §3.3)") {
+    EngineSimulation simulation(engine(), std::nullopt, nullptr, units::rpmToRadS(4000.0));
+    double lowestCutSpeed_rpm = 1.0e9;
+    SimulationState state{};
+    for (int i = 0; i < 6000; ++i) {
+        state = simulation.step(0.0, 0.0);
+        if (state.command.fuelCut) {
+            lowestCutSpeed_rpm = std::min(lowestCutSpeed_rpm, units::radSToRpm(state.speed_rad_s));
+        }
+    }
+    CHECK(lowestCutSpeed_rpm > 1050.0); // fuel returns at exit_rpm = 1100
+    CHECK(lowestCutSpeed_rpm < 1200.0);
+    CHECK_FALSE(state.command.fuelCut);
+    CHECK(units::radSToRpm(state.speed_rad_s) > 600.0); // catches itself, no stall
+    CHECK(units::radSToRpm(state.speed_rad_s) < 1000.0);
+}
+
+TEST_CASE("opening the throttle ends the overrun cut; below enter_rpm there is none") {
+    EngineSimulation coasting(engine(), std::nullopt, nullptr, units::rpmToRadS(4000.0));
+    CHECK(coasting.step(0.0, 0.0).command.fuelCut);
+    CHECK_FALSE(coasting.step(0.3, 0.0).command.fuelCut);
+    EngineSimulation slow(engine(), std::nullopt, nullptr, units::rpmToRadS(1300.0));
+    CHECK_FALSE(slow.step(0.0, 0.0).command.fuelCut);
+}
+
 TEST_CASE("a wrong ECU VE table shows up as wrong lambda (research.md §2.4)") {
     Tune lean = Tune::fromTables(engine().tables);
     lean.ve = lean.ve.scaled(0.9);

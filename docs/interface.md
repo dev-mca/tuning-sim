@@ -1,6 +1,6 @@
 # interface.md – WebSocket-Protokoll v1 (simcore ↔ UI)
 
-Stand: Iteration 6 (Protokoll unverändert seit Iteration 4). Implementierung: `core/src/adapters/protocol.cpp` (Codec) und
+Stand: Iteration 7 (neu: `setAudio`, `hello.audio`). Implementierung: `core/src/adapters/protocol.cpp` (Codec) und
 `core/src/adapters/websocket_server.cpp` (Transport). Testclient: `core/tools/ws_test.html`.
 
 ## Verbindung
@@ -36,6 +36,7 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
 | `stopSweep` | `{}` | `ack` |
 | `getTable` | `{ "id": "ve" }` (`ve`, `lambdaTarget`, `ignition`, `ignitionMbt`) | `table` oder `error` |
 | `setTableCells` | `{ "id": "ignition", "cells": [ { "x": 3, "y": 10, "value": 28.5 } ] }` | `ack` oder `error` |
+| `setAudio` | `{ "volume": 0.0..1.0, "mute": false }` (volume wird geklemmt, `mute` optional) | `ack` (auch ohne Audiogerät) |
 
 - `x`/`y` sind Indizes (Spalte = Drehzahl-Bin, Zeile = MAP-Bin), `value` in der Einheit der Tabelle.
 - `setTableCells` gilt ganz oder gar nicht: Ist eine Zelle ungültig, wird nichts geändert.
@@ -51,8 +52,11 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
   "protocolVersion": 1, "simcore": "0.1.0", "stateRate_Hz": 60,
   "engine": { "id": "i6_30_na", "name": "...", "cylinders": 6, "displacement_l": 2.993,
               "idle_rpm": 750, "revLimit_rpm": 7000 },
-  "tables": [ { "id": "ve", "name": "Volumetric Efficiency", "unit": "%", "editable": true }, ... ] } }
+  "tables": [ { "id": "ve", "name": "Volumetric Efficiency", "unit": "%", "editable": true }, ... ],
+  "audio": { "available": true, "device": "Speakers (PulseAudio)" } } }
 ```
+`audio.available` ist `false`, wenn simcore mit `--no-audio` läuft oder kein Gerät öffnen konnte;
+`device` nennt dann den Grund. Den Ton spielt simcore selbst ab, nie über diese Schnittstelle.
 
 ### `state` (60 Hz, an alle)
 ```json
@@ -63,7 +67,7 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
   "cutActive": false } }
 ```
 `dynoMode`: `free` (Motor läuft ohne Bremse) oder `sweep`. `torque_Nm` ist das effektive Moment
-des Motors, `cutActive` meldet eine aktive Kraftstoffabschaltung (Drehzahlbegrenzer).
+des Motors, `cutActive` meldet eine aktive Kraftstoffabschaltung (Drehzahlbegrenzer oder Schubabschaltung).
 
 ### `table` (Antwort auf `getTable`)
 Gleiches Format wie die Dateien in `shared/tables/` (plan.md §5.1), dazu `editable`:
@@ -102,14 +106,14 @@ Inkompatible Änderungen (Felder umbenennen oder entfernen, Einheiten ändern) e
 
 ## Geplant (spätere Iterationen)
 
-`setDynoMode` (holdRpm), `loadEngine`, `setAudio` (7), `shift`/`setClutch` (10).
+`setDynoMode` (holdRpm), `loadEngine`, `shift`/`setClutch` (10).
 Tunes speichert und lädt die UI selbst (ADR 0006); beim Laden sendet sie die abweichenden Zellen
 per `setTableCells`, ein eigenes `saveTune`/`loadTune` ist daher nicht vorgesehen.
 
 ## Verhalten des UI-Clients (Iteration 6)
 
 - Reconnect mit Backoff 0,5 → 1 → 2 → 4 → 5 s; Befehle ohne Verbindung werden verworfen.
-- Nach jedem `hello` holt die UI alle Tabellen mit `getTable` und sendet das Pedal erneut.
+- Nach jedem `hello` holt die UI alle Tabellen mit `getTable` und sendet Pedal und `setAudio` erneut.
 - Auf ein `error` zu `setTableCells` holt die UI die betroffene Tabelle neu.
 - Ungültige Frames (kein JSON, falsche Version, fehlende Pflichtfelder) werden verworfen und
   in der Browser-Konsole gemeldet.

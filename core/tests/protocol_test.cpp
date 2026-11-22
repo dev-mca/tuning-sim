@@ -111,3 +111,20 @@ TEST_CASE("hello describes the engine and its tables") {
     CHECK(payload["engine"]["revLimit_rpm"].get<double>() == doctest::Approx(7000.0));
     CHECK(payload["tables"].size() == 4);
 }
+
+TEST_CASE("setAudio is decoded with clamped volume; mute defaults to false") {
+    const SetAudio audio = decodeAs<SetAudio>(
+        R"({"v":1,"type":"setAudio","id":"5","payload":{"volume":1.7,"mute":true}})");
+    CHECK(audio.volume == 1.0);
+    CHECK(audio.muted);
+    CHECK_FALSE(decodeAs<SetAudio>(R"({"v":1,"type":"setAudio","payload":{"volume":0.3}})").muted);
+}
+
+TEST_CASE("hello announces whether audio is available") {
+    const json withoutAudio = json::parse(codec().encodeHello());
+    CHECK(withoutAudio["payload"]["audio"]["available"] == false);
+    const ProtocolCodec withAudio(test::referenceEngine(), AudioInfo{true, "Speakers (PipeWire)"});
+    const json hello = json::parse(withAudio.encodeHello());
+    CHECK(hello["payload"]["audio"]["available"] == true);
+    CHECK(hello["payload"]["audio"]["device"] == "Speakers (PipeWire)");
+}

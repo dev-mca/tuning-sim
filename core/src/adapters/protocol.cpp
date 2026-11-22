@@ -10,6 +10,7 @@
 #include <cmath>
 #include <functional>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 namespace simcore {
@@ -72,6 +73,10 @@ Command decodeCommand(const std::string& type, const json& payload,
         parameters.throttle = std::clamp(payload.value("pedal", 1.0), 0.0, 1.0);
         return StartSweep{parameters};
     }
+    if (type == "setAudio") {
+        return SetAudio{std::clamp(payload.at("volume").get<double>(), 0.0, 1.0),
+                        payload.value("mute", false)};
+    }
     if (type == "stopSweep") {
         return StopSweep{};
     }
@@ -96,12 +101,13 @@ Command decodeCommand(const std::string& type, const json& payload,
 
 } // namespace
 
-ProtocolCodec::ProtocolCodec(const LoadedEngine& engine)
+ProtocolCodec::ProtocolCodec(const LoadedEngine& engine, AudioInfo audio)
     : engineId_(engine.definition.id), engineName_(engine.definition.name),
       cylinders_(engine.definition.cylinders),
       displacement_m3_(engine.definition.displacement_m3()),
       idleSpeed_rad_s_(engine.definition.idleSpeed_rad_s),
-      revLimit_rad_s_(engine.definition.revLimit_rad_s), tables_(engine.tables) {}
+      revLimit_rad_s_(engine.definition.revLimit_rad_s), tables_(engine.tables),
+      audio_(std::move(audio)) {}
 
 const TableDescriptor* ProtocolCodec::descriptor(const std::string& tableId) const {
     const auto found = std::find_if(tables_.begin(), tables_.end(),
@@ -149,7 +155,8 @@ std::string ProtocolCodec::encodeHello() const {
                        {"displacement_l", displacement_m3_ * kLitresPerCubicMetre},
                        {"idle_rpm", units::radSToRpm(idleSpeed_rad_s_)},
                        {"revLimit_rpm", units::radSToRpm(revLimit_rad_s_)}}},
-                     {"tables", tables}});
+                     {"tables", tables},
+                     {"audio", {{"available", audio_.available}, {"device", audio_.device}}}});
 }
 
 std::string ProtocolCodec::encodeState(const StateSnapshot& state) const {

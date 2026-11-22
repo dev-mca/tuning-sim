@@ -15,8 +15,9 @@ namespace simcore {
 
 class SimulationService {
 public:
+    /// `sound` is optional: without it (tests, CLI sweeps) no acoustic parameters are produced.
     SimulationService(const LoadedEngine& engine, ICommandSource& commands,
-                      IStatePublisher& publisher);
+                      IStatePublisher& publisher, IAcousticSink* sound = nullptr);
 
     /// One fixed time step: handle pending commands, advance the simulation, publish state.
     void step();
@@ -38,6 +39,7 @@ private:
 
     ICommandSource& commands_;
     IStatePublisher& publisher_;
+    IAcousticSink* sound_;
     EngineSimulation simulation_;
     std::vector<TableDescriptor> tables_;
     double pedal_ = 0.0;

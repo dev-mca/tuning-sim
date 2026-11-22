@@ -2,7 +2,7 @@
  * End-to-end test against a running simcore (acceptance criterion of iteration 6):
  * change the ignition table, start a sweep and see a different torque curve.
  *
- *   ./build/debug/core/simcore &          # from the repository root
+ *   ./build/debug/core/simcore --no-audio &   # from the repository root
  *   cd ui && npm run test:e2e             # VITE_SIMCORE_URL overrides ws://127.0.0.1:47800
  *
  * It uses the real WebSocketSimSource and SimStore, i.e. the same code as the browser
@@ -54,6 +54,12 @@ describe('UI store against a live simcore', () => {
   afterAll(() => {
     store.revertToOriginal();
     store.stop();
+  });
+
+  it('is told whether simcore plays sound', () => {
+    const audio = store.getSnapshot().hello?.audio;
+    expect(audio).toBeDefined();
+    expect(typeof audio?.device).toBe('string');
   });
 
   it('receives state at about 60 Hz', async () => {

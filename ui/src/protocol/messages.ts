@@ -46,12 +46,20 @@ export interface EngineInfo {
   revLimit_rpm: number;
 }
 
+/** Whether simcore plays sound, and on which device (or why not). */
+export interface AudioInfo {
+  available: boolean;
+  device: string;
+}
+
 export interface HelloPayload {
   protocolVersion: number;
   simcore: string;
   stateRate_Hz: number;
   engine: EngineInfo;
   tables: TableInfo[];
+  /** Since iteration 7; older simcore versions do not send it. */
+  audio?: AudioInfo;
 }
 
 export type DynoMode = 'free' | 'sweep';
@@ -141,6 +149,13 @@ export type ClientMessage =
   | Envelope<'startSweep', StartSweepPayload>
   | Envelope<'stopSweep', Record<string, never>>
   | Envelope<'getTable', { id: TableId }>
-  | Envelope<'setTableCells', { id: TableId; cells: CellValue[] }>;
+  | Envelope<'setTableCells', { id: TableId; cells: CellValue[] }>
+  | Envelope<'setAudio', AudioSettings>;
+
+/** Volume 0..1; mute keeps the volume for later. */
+export interface AudioSettings {
+  volume: number;
+  mute: boolean;
+}
 
 export type ClientMessageType = ClientMessage['type'];

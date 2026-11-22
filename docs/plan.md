@@ -231,7 +231,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 4 | simcore: MVM-Port, Tabellen, WebSocket | P1 | modernes C++ | ✅ |
 | 5 | UI: Cockpit mit Fake-Daten | P2 | React | ✅ |
 | 6 | UI ↔ simcore live | P2 | Integration | ✅ |
-| 7 | Sound an simcore koppeln | P1 | Echtzeit-Threads | ⬜ |
+| 7 | Sound an simcore koppeln | P1 | Echtzeit-Threads | ✅ |
 | 8 | Turbo + Klopfen + Turbo-Sound | P2 | Regelungstechnik | ⬜ |
 | 9 | Kompressor/Supercharger | P2 | – | ⬜ |
 | 10 | Antriebsstrang, Rollenprüfstand, Launch/Flat Shift/Pops | P3 | – | ⬜ |
@@ -305,6 +305,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Amplitude und Klangfarbe aus Last, Zündwinkel, Lambda; Drehzahlbegrenzer und Schubabschaltung hörbar.
 - Lautstärke/Mute über UI.
 **Abnahme:** Vollgas-Sweep tönt glaubwürdig; Spätzündung tönt hörbar matter; kein Knacksen bei Lastwechseln.
+**Umgesetzt (2026-11-22):** ADR 0007. Akustik und DSP als Bibliothek `simcore_acoustic` (Spike nutzt sie mit). Simulation → `AcousticParams` (Füllung, Spätzündung gegen MBT, λ, Kraftstoffabschaltung) → Port `IAcousticSink` → Triple Buffer → miniaudio-Callback (`SoundRenderer`, `AudioOutput`). Spätzündung macht die Pulse weicher (10° spät: Spektralschwerpunkt −16 bis −20 %, Pegel ±3 dB). Mageres Gemisch klingt rauer. Zusätzlich nötig: **Schubabschaltung** in der ECU (Lab + C++, Golden unverändert) und Abgasgeometrie in der Motordatei. `setAudio` + `hello.audio`, Lautstärke/Mute in der UI (Taste M). `simcore --sound-sweep out.wav [--ignition-offset -10]` rendert einen Sweep offline, `--no-audio` für CI. Abnahme gemessen in `core/tests/sound_acceptance_test.cpp` (Klickfreiheit, Helligkeit, Pegel). 93 C++-, 64 Lab-, 154 UI-Tests. «Glaubwürdig» muss der Nutzer noch anhören.
 
 ### Iteration 8 – Turbo, Klopfen, Turbo-Sound
 - Verdichter-/Turbinenmodell, Wellendynamik, Wastegate (Open Loop + PID auf `boostTarget`), Ladeluftkühler, Abgasgegendruck.
@@ -365,6 +366,8 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - WebAssembly-Web-Demo
 - simcore liefert den Basis-Tune (aus `shared/tables`) mit, damit «Original» in der UI nicht vom Stand beim Verbinden abhängt (ADR 0006)
 - WebSocket-Server in simcore: `Origin`-Header prüfen (nur UI/Tauri zulassen), damit fremde Webseiten im Browser simcore nicht steuern können (ADR 0006)
+- Audio-Ausgabegerät in der UI wählbar machen (simcore spielt auf dem System-Standardgerät, ADR 0007)
+- Ansaug- und Mechanikgeräusch (research.md §6.5) sowie gemessene/entworfene Schalldämpfer-IR (§6.4)
 - Tabellen-Achsen in simcore auf z. B. 6 Dezimalen runden (rad/s → 1/min erzeugt 1100,0000000000002)
 - Realistisches Abgassystem implementieren (von Krümmer bis Endtopf alle Komponenten)
 - Neue Werte wie Katalysatortemperatur (Motor dreht beim Kaltstart etwas höher beim idle, um den Kat schnell warm zu bekommen, darum hört sich das auto cooler an)

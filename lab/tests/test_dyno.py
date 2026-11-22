@@ -118,6 +118,29 @@ def test_closed_throttle_engine_idles_by_itself(i6: EngineDefinition) -> None:
     assert 27_000.0 < state.manifold_pressure_pa < 45_000.0
 
 
+def test_lifting_off_at_high_speed_cuts_fuel_until_near_idle(i6: EngineDefinition) -> None:
+    # research.md §3.3: overrun fuel cut above enter_rpm with closed throttle, back on below
+    # exit_rpm, so the engine coasts down without fuel and then catches itself at idle.
+    simulation = EngineSimulation(i6, initial_speed_rad_s=units.rpm_to_rad_s(4000.0))
+    states = [simulation.step(0.0, 0.0) for _ in range(6000)]
+    cut_speeds = [units.rad_s_to_rpm(s.speed_rad_s) for s in states if s.command.fuel_cut]
+    assert cut_speeds, "no overrun fuel cut"
+    assert min(cut_speeds) > 1050.0  # resumes at exit_rpm (1100)
+    assert not states[-1].command.fuel_cut
+    assert 600.0 < units.rad_s_to_rpm(states[-1].speed_rad_s) < 1000.0  # no stall
+
+
+def test_opening_the_throttle_ends_the_overrun_cut(i6: EngineDefinition) -> None:
+    simulation = EngineSimulation(i6, initial_speed_rad_s=units.rpm_to_rad_s(4000.0))
+    assert simulation.step(0.0, 0.0).command.fuel_cut
+    assert not simulation.step(0.3, 0.0).command.fuel_cut
+
+
+def test_overrun_cut_needs_more_than_enter_speed(i6: EngineDefinition) -> None:
+    simulation = EngineSimulation(i6, initial_speed_rad_s=units.rpm_to_rad_s(1300.0))
+    assert not simulation.step(0.0, 0.0).command.fuel_cut  # between exit and enter
+
+
 def test_halving_the_time_step_changes_little(i6: EngineDefinition) -> None:
     # research.md §9: stability check with dt and dt/2.
     def final_speed(dt: float) -> float:
