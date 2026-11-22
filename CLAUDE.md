@@ -79,7 +79,8 @@ Du darfst und sollst `CLAUDE.md` selbst erweitern, wenn du etwas lernst, das kü
 # C++ (aus dem Repo-Root), Build-Ordner: build/<preset>/
 cmake --preset debug            # konfigurieren (Ninja, Debug); "release" analog
 cmake --build --preset debug    # bauen
-./build/debug/core/simcore      # Server ws://127.0.0.1:47800 (Ctrl+C beendet); Testseite core/tools/ws_test.html
+./build/debug/core/simcore      # Server ws://127.0.0.1:47800 mit Ton (Ctrl+C beendet); --no-audio ohne Ton
+./build/release/core/simcore --sound-sweep out.wav [--ignition-offset -10]   # Sweep-Sound als WAV
 ./build/debug/core/simcore --sweep 1000 7000   # Dyno-Sweep als CSV (Format wie Golden File)
 ctest --preset debug            # Tests (doctest, ADR 0002)
 find core -name '*.[ch]pp' | xargs clang-format -i   # formatieren
@@ -97,7 +98,7 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # einmalig
 npm ci                          # Abhängigkeiten exakt nach package-lock.json
 npm run dev                     # Dev-Server http://localhost:5173
 npm test                        # Vitest (Logik, Fake-Quelle, Store)
-npm run test:e2e                # End-to-End gegen laufendes simcore (vorher ./build/debug/core/simcore)
+npm run test:e2e                # End-to-End gegen laufendes simcore (vorher ./build/debug/core/simcore --no-audio)
 npm run build                   # Typecheck + Produktions-Build nach dist/
 npm run lint && npm run format  # ESLint + Prettier
 ```
@@ -106,15 +107,15 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 
 ## Aktueller Stand
 
-- Iteration: **6 – UI ↔ simcore live ✅ abgeschlossen** (2026-11-19)
-- Nächste Iteration: **7 – Sound an simcore koppeln**
+- Iteration: **7 – Sound an simcore koppeln ✅ abgeschlossen** (2026-11-22)
+- Nächste Iteration: **8 – Turbo, Klopfen, Turbo-Sound**
 - System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
-- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket, 0005 UI-Zustand/Rendering, 0006 Live-Verbindung/Tune-Dateien
-- simcore (`core/src/`): `domain/` (Table1D/2D, Saugrohr, MVM, ECU, Dyno/SweepRun; bitgenau wie lab), `ports/` (Interfaces + Nachrichten), `adapters/` (JSON-Repository, Protokoll-Codec, MessageBus, WebSocket-Server, CSV), `app/` (SimulationService, RealtimeRunner, CLI, main), `concurrency/` (SPSC-Queue, Triple Buffer). Protokoll v1: `docs/interface.md`.
+- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket, 0005 UI-Zustand/Rendering, 0006 Live-Verbindung/Tune-Dateien, 0007 Sound in simcore
+- simcore (`core/src/`): `domain/` (Table1D/2D, Saugrohr, MVM, ECU mit Begrenzer + Schubabschaltung, Dyno/SweepRun; bitgenau wie lab), `acoustic/` + `dsp/` (Bibliothek `simcore_acoustic`: Pulse, Wellenleiter, `AcousticParams` → `SoundTarget`), `ports/` (Interfaces inkl. `IAcousticSink`), `adapters/` (JSON-Repository, Protokoll-Codec, MessageBus, WebSocket-Server, CSV, WAV, miniaudio `AudioOutput`), `app/` (SimulationService, RealtimeRunner, `SoundRenderer`, `engine_acoustics`, `sound_sweep`, CLI, main), `concurrency/` (SPSC-Queue, Triple Buffer). Protokoll v1: `docs/interface.md`.
 - UI-Cockpit (`ui/src/`, Übersicht in `ui/README.md`): Port `sim/SimSource.ts`, `sim/fake/FakeSimSource` (Protokoll v1, Daten aus `shared/`), `state/simStore.ts`, Gauges (SVG), Tabelleneditor (Canvas), Dyno (uPlot). `App.tsx` wählt die Quelle (Live = `sim/live/WebSocketSimSource`, Fake), Tunes als JSON in der UI (`domain/tuneFile.ts`).
 - Lab (Referenz für den C++-Port in Iteration 4): MVM, ECU, Dyno in `lab/src/tuning_lab/` (Übersicht in `lab/README.md`); Referenzmotor `shared/engines/i6_30_na.json`, Tabellen `shared/tables/i6_30_na/`, Golden File `shared/golden/i6_30_na_sweep.csv`. Ergebnis Serie: 304 Nm, 196 kW, bmep 12,8 bar, Leerlauf 765/min bei 30 kPa.
-- Sound-Spike `core/spikes/sound_spike/` (README dort): I4/I6/V8 cross/flat, Wellenleiter-Auspuff, miniaudio. `src/acoustic/` + `src/dsp/` sind für den Umzug nach simcore in Iteration 7 gedacht.
+- Sound-Spike `core/spikes/sound_spike/` (README dort): nur noch interaktives Vergleichs-Frontend (I4/I6/V8), nutzt `simcore_acoustic`.
 
 ## Learnings
 
@@ -125,8 +126,8 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - 2026-11-18: Saugrohr ist nahe Vollgas steif (Psi steil bei Pi→1). Lösung: Psi linear für Pi > 0,99 und 10 Teilschritte pro 1 ms. Der C++-Port muss das identisch machen, sonst passt das Golden File nicht.
 - 2026-11-18: Leerlauf braucht Momentenreserve (Zündung ~4°), tiefe VE bei Unterdruck und T_aux; sonst hängt der MAP bei 16 kPa. Ein Bremsprüfstand kann den Motor nicht antreiben (Bremse ≥ 0), Leerlauf daher frei laufend testen.
 - 2026-11-18: Hubraum aus Bohrung/Hub = 2,993 l (plan.md nennt 2,998 l). Kurbelwinkel intern in Grad (`_deg`), sonst SI.
-- 2026-11-18: Abhängigkeiten zentral in `core/cmake/Dependencies.cmake` (Tarball + SHA256). miniaudio als eigenes C-Target ohne Decoder/Engine; nur `audio_device.cpp` inkludiert `miniaudio.h`.
-- 2026-11-18: Sound objektiv prüfen statt nur hören: Goertzel-Ordnungsanalyse in `core/spikes/sound_spike/tests/order_analysis.hpp` (Analysedauer = ganze Zahl von Arbeitsspielen, sonst Leckage). Spektrogramme lassen sich mit dem Lab-venv aus den WAVs erzeugen.
+- 2026-11-18: Abhängigkeiten zentral in `core/cmake/Dependencies.cmake` (Tarball + SHA256). miniaudio als eigenes C-Target ohne Decoder/Engine; nur `adapters/audio_output.cpp` (und der Spike-Adapter) inkludieren `miniaudio.h`.
+- 2026-11-18: Sound objektiv prüfen statt nur hören: Goertzel-Ordnungsanalyse in `core/tests/acoustic/order_analysis.hpp` (Analysedauer = ganze Zahl von Arbeitsspielen, sonst Leckage). Spektrogramme lassen sich mit dem Lab-venv aus den WAVs erzeugen.
 - 2026-11-18: `.clang-format` mit `AccessModifierOffset: -4` (public:/private: am Zeilenanfang).
 - 2026-11-18: C++-Port gibt das Golden File exakt wieder (0 Abweichung bei 6 Dezimalen), weil jede Formel in derselben Gleitkomma-Reihenfolge wie Python steht. Bei Physikänderungen: zuerst lab ändern, Golden neu erzeugen, dann C++ identisch nachziehen.
 - 2026-11-18: Domain-Code kennt kein JSON/Netzwerk: Einheiten-Umrechnung nur in `adapters/table_units` und im Protokoll-Codec. Neue Befehle: Struct in `ports/messages.hpp`, Decoder im Codec, Handler in `SimulationService`, Doku in `docs/interface.md`.
@@ -135,4 +136,7 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - 2026-11-19: UI-Screenshots ohne Chrome: `firefox --headless --screenshot` wartet auf `load`. Für spätere Zustände eine temporäre Seite mit iframe und einem verzögerten Bild nutzen (nicht committen).
 - 2026-11-19: Live-Daten unterscheiden sich vom Fake: simcore meldet gemessene Dyno-Drehzahlen (nicht ganzzahlig) und Achsen mit Gleitkomma-Rauschen (1100,0000000000002). Anzeige über `formatClean`, Achsenvergleich mit Toleranz, Läufe fürs Overlay interpolieren. Neue UI-Features immer auch live prüfen.
 - 2026-11-19: Commit-Subject max. 72 Zeichen (Hook des engineering-fundamentals-Plugins blockiert sonst).
+- 2026-11-22: Klangfarbe wird durch die Pulsform bestimmt, nicht durch den Tiefpass bei einigen kHz (hörbare Energie < 1,5 kHz). Helligkeit messen: RMS der ersten Differenz / RMS. Sweep-WAVs mit `--sound-sweep` erzeugen und vergleichen.
+- 2026-11-22: Nach `git stash` zum Prüfen eines Zwischen-Commits neu bauen, sonst laufen veraltete Binaries (z. B. «unknown option»).
+- 2026-11-22: Der Standard-Audioausgang des Nutzers ist HDMI (GA104). Kommt kein Ton, das Standardgerät in den KDE-Einstellungen prüfen.
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.
