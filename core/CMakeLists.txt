@@ -27,7 +27,8 @@ add_library(simcore_acoustic STATIC
   src/acoustic/exhaust_network.cpp
   src/acoustic/engine_sound.cpp
   src/acoustic/offline_render.cpp
-  src/acoustic/acoustic_params.cpp)
+  src/acoustic/acoustic_params.cpp
+  src/acoustic/afterburn.cpp)
 target_include_directories(simcore_acoustic PUBLIC src)
 target_compile_features(simcore_acoustic PUBLIC cxx_std_20)
 target_link_libraries(simcore_acoustic PRIVATE simcore_warnings)

@@ -73,3 +73,25 @@ TEST_CASE("fuel cut and lambda are passed on") {
     CHECK(params.fuelCut);
     CHECK(std::isinf(params.lambda));
 }
+
+TEST_CASE("the catalyst must be hot for pops") {
+    CHECK(catalystHotness(kPopLightOff_K - 50.0) == 0.0);
+    CHECK(catalystHotness((kPopLightOff_K + kPopFullyHot_K) / 2.0) == doctest::Approx(0.5));
+    CHECK(catalystHotness(kPopFullyHot_K + 100.0) == 1.0);
+}
+
+TEST_CASE("afterburn needs fuel in overrun, late combustion and a hot catalyst") {
+    const EngineDefinition& definition = test::referenceEngine().definition;
+    SimulationState state = settledState(0.5, 500);
+    state.engine.lateCombustionFraction = 0.5;
+    state.catalystTemperature_K = kPopFullyHot_K;
+    state.command.overrunFueling = false;
+    CHECK(acousticParams(state, definition).afterburnRate == 0.0); // normal driving: no pops
+
+    state.command.overrunFueling = true;
+    CHECK(acousticParams(state, definition).afterburnRate ==
+          doctest::Approx(kAfterburnEventShare * 0.5));
+
+    state.catalystTemperature_K = kPopLightOff_K - 1.0; // cold catalyst
+    CHECK(acousticParams(state, definition).afterburnRate == 0.0);
+}

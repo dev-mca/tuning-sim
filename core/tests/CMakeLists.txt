@@ -16,6 +16,7 @@ add_executable(simcore_tests
   acoustic/exhaust_network_test.cpp
   acoustic/engine_sound_test.cpp
   acoustic/acoustic_params_test.cpp
+  acoustic/afterburn_test.cpp
   engine_acoustics_test.cpp
   sound_acceptance_test.cpp
   json_repository_test.cpp)

@@ -7,6 +7,7 @@
 #include "app/engine_acoustics.hpp"
 #include "app/sound_renderer.hpp"
 #include "app/sound_sweep.hpp"
+#include "domain/ecu/ecu.hpp"
 #include "domain/engine/engine_simulation.hpp"
 #include "test_support.hpp"
 
@@ -175,4 +176,49 @@ TEST_CASE("mute fades out without a click and volume is clamped") {
     CHECK(renderer.volume() == 1.0F);
     renderer.setOutput(-1.0, false);
     CHECK(renderer.volume() == 0.0F);
+}
+
+namespace {
+
+/// Number of 10 ms windows whose peak exceeds `threshold`: transients such as bangs.
+int loudWindows(std::span<const float> mono, float threshold) {
+    constexpr std::size_t kWindow = 480;
+    int count = 0;
+    for (std::size_t start = 0; start + kWindow <= mono.size(); start += kWindow) {
+        float windowPeak = 0.0F;
+        for (std::size_t i = start; i < start + kWindow; ++i) {
+            windowPeak = std::max(windowPeak, std::abs(mono[i]));
+        }
+        count += windowPeak > threshold ? 1 : 0;
+    }
+    return count;
+}
+
+} // namespace
+
+TEST_CASE("a pops tune bangs in overrun, the stock tune stays quiet") {
+    const EngineDefinition& definition = test::referenceEngine().definition;
+    const std::vector<float> stock = left(renderBlipSound(definition, OverrunSettings{}));
+    const std::vector<float> pops =
+        left(renderBlipSound(definition, OverrunSettings{false, 35.0, 0.1}));
+    constexpr float kBangThreshold = 0.15F;
+    // Second lift-off (8.0 s ...): the catalyst is hot from the pops of the first one.
+    const std::vector<float> stockOverrun = section(stock, 8.1, 9.5);
+    const std::vector<float> popsOverrun = section(pops, 8.1, 9.5);
+    CHECK(loudWindows(stockOverrun, kBangThreshold) == 0);
+    CHECK(loudWindows(popsOverrun, kBangThreshold) >= 5);
+    CHECK(rms(popsOverrun) > 3.0 * rms(stockOverrun));
+    const auto [low, high] = std::minmax_element(pops.begin(), pops.end());
+    CHECK(*low >= -1.0F);
+    CHECK(*high <= 1.0F);
+}
+
+TEST_CASE("switching the fuel cut off alone gives a soft burble without bangs") {
+    const EngineDefinition& definition = test::referenceEngine().definition;
+    const std::vector<float> stock = left(renderBlipSound(definition, OverrunSettings{}));
+    const std::vector<float> noCut =
+        left(renderBlipSound(definition, OverrunSettings{false, 0.0, 0.0}));
+    const std::vector<float> overrun = section(noCut, 8.1, 9.5);
+    CHECK(loudWindows(overrun, 0.15F) == 0);
+    CHECK(rms(overrun) > 1.5 * rms(section(stock, 8.1, 9.5)));
 }

@@ -73,6 +73,19 @@ int runSoundSweep(const CliOptions& options, const LoadedEngine& engine) {
     return 0;
 }
 
+int runSoundBlips(const CliOptions& options, const LoadedEngine& engine) {
+    const OverrunSettings overrun{options.overrunFuelCut, options.overrunRetard_deg,
+                                  options.overrunEnrichment};
+    const std::vector<float> samples = renderBlipSound(engine.definition, overrun, kSampleRate);
+    if (!writeWav16(options.soundBlipsFile, samples, kStereo, kSampleRate)) {
+        std::cerr << "error: cannot write " << options.soundBlipsFile << '\n';
+        return 1;
+    }
+    std::cout << "wrote " << options.soundBlipsFile << " ("
+              << static_cast<double>(samples.size() / kStereo) / kSampleRate << " s)\n";
+    return 0;
+}
+
 int serve(const CliOptions& options, const LoadedEngine& engine) {
     constexpr auto kMainLoopInterval = std::chrono::milliseconds(100);
     auto bus = std::make_unique<MessageBus>(); // large queues: keep them off the stack
@@ -139,6 +152,8 @@ int main(int argc, char** argv) {
             return runSweepToStdout(options, engine);
         case CliMode::SoundSweep:
             return runSoundSweep(options, engine);
+        case CliMode::SoundBlips:
+            return runSoundBlips(options, engine);
         default:
             return serve(options, engine);
         }

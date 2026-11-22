@@ -41,6 +41,11 @@ acoustic::LayoutSpec exhaustLayout(const EngineDefinition& definition) {
     return layout;
 }
 
+double catalystHotness(double catalystTemperature_K) noexcept {
+    return std::clamp((catalystTemperature_K - kPopLightOff_K) / (kPopFullyHot_K - kPopLightOff_K),
+                      0.0, 1.0);
+}
+
 acoustic::AcousticParams acousticParams(const SimulationState& state,
                                         const EngineDefinition& definition) noexcept {
     // Reference: a cylinder set completely filled at ambient conditions (VE = 1, §2.2).
@@ -55,6 +60,11 @@ acoustic::AcousticParams acousticParams(const SimulationState& state,
         std::max(0.0, state.engine.ignitionMbt_deg - state.command.ignition_deg);
     params.lambda = state.engine.lambdaActual;
     params.fuelCut = state.command.fuelCut;
+    // Pops need fuel in overrun, late combustion and a hot exhaust (research.md §2.10a, §6.7).
+    params.afterburnRate = state.command.overrunFueling
+                               ? kAfterburnEventShare * state.engine.lateCombustionFraction *
+                                     catalystHotness(state.catalystTemperature_K)
+                               : 0.0;
     return params;
 }
 

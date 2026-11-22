@@ -42,7 +42,8 @@ EngineSound::Channel::Channel(const std::vector<float>& mufflerResponse, float s
 
 EngineSound::EngineSound(const LayoutSpec& layout, float sampleRate, std::uint32_t seed)
     : sampleRate_(sampleRate), pulses_(layout.cylinders, sampleRate, seed),
-      exhaust_(layout, sampleRate), sources_(layout.cylinders.size(), 0.0F),
+      afterburn_(sampleRate, seed), exhaust_(layout, sampleRate),
+      sources_(layout.cylinders.size(), 0.0F),
       speed_(kMaxSpeedChange_rpm_s, kSpeedSmoothing_s, static_cast<double>(sampleRate)),
       load_(1.0e9, kLoadSmoothing_s, static_cast<double>(sampleRate)),
       brightness_(1.0e9, kBrightnessSmoothing_s, static_cast<double>(sampleRate)),
@@ -53,6 +54,7 @@ EngineSound::EngineSound(const LayoutSpec& layout, float sampleRate, std::uint32
 
 void EngineSound::reset(double speed_rpm, float load) noexcept {
     pulses_.reset();
+    afterburn_.reset();
     exhaust_.reset();
     speed_.jumpTo(speed_rpm);
     load_.jumpTo(static_cast<double>(load));
@@ -92,13 +94,18 @@ void EngineSound::render(std::span<float> interleavedStereo, const SoundTarget& 
         }
         --samplesUntilToneUpdate_;
 
-        pulses_.process(speed, load, sources_);
+        const std::uint32_t opened = pulses_.process(speed, load, sources_);
+        for (std::uint32_t mask = opened; mask != 0U; mask &= mask - 1U) {
+            afterburn_.onExhaustEvent(target.afterburnRate); // one chance per opened valve
+        }
+        // Bangs bypass the tone filter: the crack must stay sharp even on a dull overrun.
+        const float bang = kBangGain * afterburn_.process();
         const StereoSample radiated = exhaust_.process(sources_);
         const std::array<float, 2> raw = {radiated.left, radiated.right};
         for (std::size_t channel = 0; channel < 2; ++channel) {
             Channel& c = channels_[channel];
             float sample = c.muffler.process(raw[channel]);
-            sample = c.tone.process(sample);
+            sample = c.tone.process(sample) + bang;
             sample = c.dcBlocker.process(sample);
             interleavedStereo[frame + channel] = softClip(kOutputGain * sample);
         }
