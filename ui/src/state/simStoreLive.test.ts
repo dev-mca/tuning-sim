@@ -236,3 +236,50 @@ describe('SimStore with a live source', () => {
     expect(store.getSnapshot().runs[0]?.note).toBe('ignition: 2 cells, mean −3.0 deg BTDC');
   });
 });
+
+describe('SimStore overrun settings', () => {
+  it('asks for them after hello, keeps the first as original and reverts to it', () => {
+    const { store, source } = connectedStore();
+    expect(source.sentOfType('getOverrunSettings')).toHaveLength(1);
+    const stock = { fuelCut: true, retard_deg: 0, enrichment_pct: 0 };
+    source.server({ type: 'overrunSettings', payload: stock });
+    expect(store.getSnapshot().overrun).toEqual(stock);
+
+    const pops = { fuelCut: false, retard_deg: 35, enrichment_pct: 10 };
+    store.setOverrun(pops);
+    expect(store.getSnapshot().overrun).toEqual(pops); // optimistic
+    expect(source.sentOfType('setOverrunSettings').at(-1)?.payload).toEqual(pops);
+    source.server({ type: 'overrunSettings', payload: pops });
+    expect(store.getSnapshot().originalOverrun).toEqual(stock);
+
+    store.revertToOriginal();
+    expect(source.sentOfType('setOverrunSettings').at(-1)?.payload).toEqual(stock);
+  });
+
+  it('asks again when simcore rejects a change', () => {
+    const { store, source } = connectedStore();
+    store.setOverrun({ fuelCut: false, retard_deg: 99, enrichment_pct: 0 });
+    const request = source.sentOfType('setOverrunSettings').at(-1);
+    source.sent.length = 0;
+    source.server({
+      type: 'error',
+      id: request?.id,
+      payload: { message: 'overrun retard must be 0..60 deg' },
+    });
+    expect(source.sentOfType('getOverrunSettings')).toHaveLength(1);
+  });
+
+  it('saves the overrun settings in the tune file and loads them back', () => {
+    const { store, source } = connectedStore();
+    const pops = { fuelCut: false, retard_deg: 35, enrichment_pct: 10 };
+    source.server({ type: 'overrunSettings', payload: pops });
+    const tune = store.exportTune(new Date(2026, 10, 22));
+    expect(tune?.overrun).toEqual(pops);
+    source.server({
+      type: 'overrunSettings',
+      payload: { fuelCut: true, retard_deg: 0, enrichment_pct: 0 },
+    });
+    store.importTune(JSON.stringify(tune));
+    expect(source.sentOfType('setOverrunSettings').at(-1)?.payload).toEqual(pops);
+  });
+});

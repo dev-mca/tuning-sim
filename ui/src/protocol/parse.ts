@@ -9,6 +9,7 @@ const KNOWN_TYPES: ReadonlySet<string> = new Set<ServerMessage['type']>([
   'error',
   'dynoProgress',
   'dynoResult',
+  'overrunSettings',
 ]);
 
 export type ParseResult =
@@ -57,7 +58,7 @@ export function parseServerMessage(text: string): ParseResult {
 
 /** Fields per type that the UI reads without further checks. */
 const REQUIRED_FIELDS: Readonly<
-  Record<string, readonly [string, 'number' | 'string' | 'array' | 'object'][]>
+  Record<string, readonly [string, 'number' | 'string' | 'boolean' | 'array' | 'object'][]>
 > = {
   hello: [
     ['engine', 'object'],
@@ -76,6 +77,11 @@ const REQUIRED_FIELDS: Readonly<
   ],
   error: [['message', 'string']],
   dynoProgress: [['progress', 'number']],
+  overrunSettings: [
+    ['fuelCut', 'boolean'],
+    ['retard_deg', 'number'],
+    ['enrichment_pct', 'number'],
+  ],
   dynoResult: [
     ['rpm', 'array'],
     ['torque_Nm', 'array'],

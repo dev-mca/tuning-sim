@@ -166,3 +166,14 @@ describe('differingCells', () => {
     expect(differingCells(ve, edited)).toEqual([{ x: 0, y: 0, value: 50 }]);
   });
 });
+
+describe('overrun settings in tune files', () => {
+  it('are optional, round-trip and are validated', () => {
+    expect(createTuneFile('i6', [ve], savedAt).overrun).toBeUndefined();
+    const pops = { fuelCut: false, retard_deg: 35, enrichment_pct: 10 };
+    const tune = createTuneFile('i6', [ve], savedAt, pops);
+    expect(parseTuneFile(JSON.stringify(tune)).overrun).toEqual(pops);
+    const broken = { ...tune, overrun: { fuelCut: 'no', retard_deg: 1, enrichment_pct: 0 } };
+    expect(() => parseTuneFile(JSON.stringify(broken))).toThrow(/overrun settings/);
+  });
+});

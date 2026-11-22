@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 using namespace simcore;
 
@@ -120,6 +121,47 @@ TEST_CASE("opening the throttle ends the overrun cut; below enter_rpm there is n
     CHECK_FALSE(coasting.step(0.3, 0.0).command.fuelCut);
     EngineSimulation slow(engine(), std::nullopt, nullptr, units::rpmToRadS(1300.0));
     CHECK_FALSE(slow.step(0.0, 0.0).command.fuelCut);
+}
+
+namespace {
+
+std::vector<SimulationState> coasting(const OverrunSettings& settings, int steps) {
+    Tune tune = Tune::fromTables(engine().tables);
+    tune.overrun = settings;
+    EngineSimulation simulation(engine(), tune, nullptr, units::rpmToRadS(5000.0));
+    std::vector<SimulationState> states;
+    for (int i = 0; i < steps; ++i) {
+        states.push_back(simulation.step(0.0, 0.0));
+    }
+    return states;
+}
+
+const OverrunSettings kPops{false, 35.0, 0.1};
+
+} // namespace
+
+TEST_CASE("without fuel cut the ECU keeps fuelling in overrun; a pops tune burns late") {
+    const SimulationState stock = coasting({}, 1).back();
+    CHECK(stock.command.fuelCut);
+    CHECK_FALSE(stock.command.overrunFueling);
+
+    const SimulationState plain = coasting({false, 0.0, 0.0}, 1).back();
+    CHECK_FALSE(plain.command.fuelCut);
+    CHECK(plain.command.overrunFueling);
+    CHECK(plain.engine.lateCombustionFraction == 0.0);
+
+    const SimulationState pops = coasting(kPops, 1).back();
+    CHECK(pops.command.ignition_deg == doctest::Approx(plain.command.ignition_deg - 35.0));
+    CHECK(pops.command.fuelMassPerCycle_kg ==
+          doctest::Approx(plain.command.fuelMassPerCycle_kg * 1.1).epsilon(1e-3));
+    CHECK(pops.engine.lateCombustionFraction > 0.3);
+    CHECK(pops.engine.afterburnTemperatureRise_K > 100.0);
+}
+
+TEST_CASE("the catalyst cools in fuel cut and heats up with a pops tune") {
+    const double start = engine().afterburn.catalystInitial_K;
+    CHECK(coasting({}, 1500).back().catalystTemperature_K < start);
+    CHECK(coasting(kPops, 1500).back().catalystTemperature_K > start + 50.0);
 }
 
 TEST_CASE("a wrong ECU VE table shows up as wrong lambda (research.md §2.4)") {

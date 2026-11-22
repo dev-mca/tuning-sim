@@ -14,6 +14,7 @@ import {
   type DynoResultPayload,
   type EngineState,
   type HelloPayload,
+  type OverrunSettings,
   PROTOCOL_VERSION,
   type ServerMessage,
   type StartSweepPayload,
@@ -55,6 +56,10 @@ export interface SimSnapshot {
   sourceAddress: string;
   /** The user's sound settings; sent to simcore after every hello. */
   audio: AudioSettings;
+  /** ECU overrun settings (pops & bangs); null until simcore reported them. */
+  overrun: OverrunSettings | null;
+  /** Overrun settings as first received, for "revert". */
+  originalOverrun: OverrunSettings | null;
 }
 
 export interface Toast {
@@ -106,6 +111,8 @@ export class SimStore {
       toast: null,
       sourceAddress: source.address,
       audio,
+      overrun: null,
+      originalOverrun: null,
     };
   }
 
@@ -189,13 +196,27 @@ export class SimStore {
     }
   }
 
-  /** The editable tables as a tune file, or null while no engine/tables are known. */
+  /**
+   * Changes the overrun settings (optimistic, like table edits); simcore confirms by
+   * broadcasting overrunSettings, or rejects with an error and the store asks again.
+   */
+  setOverrun(settings: OverrunSettings): void {
+    this.update({ overrun: settings });
+    this.send({ type: 'setOverrunSettings', payload: settings });
+  }
+
+  /** The editable tables (and overrun settings) as a tune file, or null while unknown. */
   exportTune(savedAt: Date): TuneFile | null {
     const engine = this.snapshot.hello?.engine.id;
     if (engine === undefined || this.snapshot.tables.size === 0) {
       return null;
     }
-    return createTuneFile(engine, this.snapshot.tables.values(), savedAt);
+    return createTuneFile(
+      engine,
+      this.snapshot.tables.values(),
+      savedAt,
+      this.snapshot.overrun ?? undefined,
+    );
   }
 
   /**
@@ -207,12 +228,18 @@ export class SimStore {
     if (engine === undefined) {
       throw new Error('no engine connected');
     }
-    const changes = tuneChanges(parseTuneFile(text), engine, this.snapshot.tables);
+    const tune = parseTuneFile(text);
+    const changes = tuneChanges(tune, engine, this.snapshot.tables);
     this.applyStep(changes);
+    if (tune.overrun !== undefined) {
+      this.setOverrun(tune.overrun); // settings are not part of the undo history
+    }
     return changes.reduce((sum, change) => sum + change.cells.length, 0);
   }
 
-  /** Restores the tables as they came from the simulation (one undo step). */
+  /**
+   * Restores tables (one undo step) and overrun settings as they came from the simulation.
+   */
   revertToOriginal(): void {
     const changes = [...this.snapshot.tables.values()].flatMap((table) => {
       const original = this.snapshot.originalTables.get(table.id);
@@ -221,6 +248,9 @@ export class SimStore {
         : [{ tableId: table.id, cells: differingCells(original, table) }];
     });
     this.applyStep(changes.filter((change) => change.cells.length > 0));
+    if (this.snapshot.originalOverrun !== null) {
+      this.setOverrun(this.snapshot.originalOverrun);
+    }
   }
 
   undo(): void {
@@ -284,6 +314,12 @@ export class SimStore {
       case 'error':
         this.handleError(message.payload.message, request);
         return;
+      case 'overrunSettings':
+        this.update({
+          overrun: message.payload,
+          originalOverrun: this.snapshot.originalOverrun ?? message.payload,
+        });
+        return;
       case 'ack':
         return;
     }
@@ -301,6 +337,7 @@ export class SimStore {
     }
     this.send({ type: 'setPedal', payload: { value: this.pedal } });
     this.send({ type: 'setAudio', payload: this.snapshot.audio });
+    this.send({ type: 'getOverrunSettings', payload: {} });
   }
 
   /** A rejected table edit leaves the optimistic local copy wrong, so fetch the real table. */
@@ -308,6 +345,9 @@ export class SimStore {
     this.notify('error', message);
     if (request?.type === 'setTableCells' && request.tableId !== undefined) {
       this.send({ type: 'getTable', payload: { id: request.tableId } });
+    }
+    if (request?.type === 'setOverrunSettings') {
+      this.send({ type: 'getOverrunSettings', payload: {} });
     }
   }
 

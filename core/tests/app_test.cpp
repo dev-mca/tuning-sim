@@ -52,6 +52,18 @@ TEST_CASE("sound sweep and audio options are parsed") {
     CHECK(parseCommandLine({}).options->audio);
 }
 
+TEST_CASE("sound blips with overrun settings are parsed") {
+    const CliParseResult result =
+        parseCommandLine({"--sound-blips", "pops.wav", "--no-overrun-cut", "--overrun-retard", "35",
+                          "--overrun-enrichment", "0.1"});
+    REQUIRE(result.options.has_value());
+    CHECK(result.options->mode == CliMode::SoundBlips);
+    CHECK(result.options->soundBlipsFile == "pops.wav");
+    CHECK_FALSE(result.options->overrunFuelCut);
+    CHECK(result.options->overrunRetard_deg == 35.0);
+    CHECK(result.options->overrunEnrichment == 0.1);
+}
+
 TEST_CASE("invalid command lines are rejected with a message") {
     for (const auto& arguments :
          std::vector<std::vector<std::string>>{{"--sweep", "1000"},

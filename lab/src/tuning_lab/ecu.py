@@ -4,6 +4,8 @@ Concepts as in Speeduino/rusEFI (no code taken from them, they are GPL):
 load = MAP, read VE / lambda target / ignition from tables, compute the fuel mass.
 Rev limiter: hard fuel cut with hysteresis.
 Overrun (deceleration) fuel cut: throttle closed above a speed threshold (research.md §3.3).
+With the cut switched off the ECU keeps fuelling in overrun, optionally with retarded ignition
+and extra fuel: the "pops & bangs" map (research.md §3.3, §2.10a).
 """
 
 from dataclasses import dataclass
@@ -15,12 +17,25 @@ from tuning_lab.table import Table2D
 
 
 @dataclass(frozen=True)
+class OverrunSettings:
+    """What the ECU does when the driver lifts off at speed (research.md §3.3)."""
+
+    fuel_cut: bool = True
+    """True: no fuel in overrun (stock). False: keep fuelling (needed for pops)."""
+    retard_deg: float = 0.0
+    """Ignition taken back from the map while fuelling in overrun, deg."""
+    enrichment: float = 0.0
+    """Extra fuel while fuelling in overrun, as a fraction (0.1 = +10 %)."""
+
+
+@dataclass(frozen=True)
 class Tune:
-    """The tables an ECU works with; this is what the user tunes."""
+    """The tables and settings an ECU works with; this is what the user tunes."""
 
     ve: Table2D
     lambda_target: Table2D
     ignition: Table2D
+    overrun: OverrunSettings = OverrunSettings()
 
     @classmethod
     def from_tables(cls, tables: EngineTables) -> "Tune":
@@ -37,6 +52,8 @@ class EcuCommand:
     ignition_deg: float
     lambda_target: float
     fuel_cut: bool
+    overrun_fueling: bool = False
+    """True while the ECU fuels in overrun (fuel cut switched off): pops are possible."""
 
 
 class Ecu:
@@ -54,7 +71,7 @@ class Ecu:
         self._rev_resume_rad_s = rev_limit_rad_s - rev_limit_hysteresis_rad_s
         self._overrun = overrun_cut
         self._limiter_cut = False
-        self._overrun_cut = False
+        self._in_overrun = False
 
     def update(
         self,
@@ -64,11 +81,14 @@ class Ecu:
         throttle: float,
     ) -> EcuCommand:
         self._update_rev_limiter(speed_rad_s)
-        self._update_overrun_cut(speed_rad_s, throttle)
+        self._update_overrun(speed_rad_s, throttle)
+        overrun = self._tune.overrun
         lambda_target = self._tune.lambda_target.lookup(speed_rad_s, manifold_pressure_pa)
         ignition_deg = self._tune.ignition.lookup(speed_rad_s, manifold_pressure_pa)
-        if self._limiter_cut or self._overrun_cut:
+        if self._limiter_cut or (self._in_overrun and overrun.fuel_cut):
             return EcuCommand(0.0, ignition_deg, lambda_target, fuel_cut=True)
+        if self._in_overrun:
+            ignition_deg = ignition_deg - overrun.retard_deg
 
         # §2.2 + §2.4: the ECU's belief of the air mass, then fuel for the target lambda.
         believed_ve = self._tune.ve.lookup(speed_rad_s, manifold_pressure_pa)
@@ -78,7 +98,15 @@ class Ecu:
             * self._displacement_m3
         )
         fuel_per_cycle = believed_air_per_cycle / (lambda_target * AFR_STOICH_GASOLINE)
-        return EcuCommand(fuel_per_cycle, ignition_deg, lambda_target, fuel_cut=False)
+        if self._in_overrun:
+            fuel_per_cycle = fuel_per_cycle * (1.0 + overrun.enrichment)
+        return EcuCommand(
+            fuel_per_cycle,
+            ignition_deg,
+            lambda_target,
+            fuel_cut=False,
+            overrun_fueling=self._in_overrun,
+        )
 
     def _update_rev_limiter(self, speed_rad_s: float) -> None:
         # Hysteresis: cut above the limit, resume only after dropping below limit - hysteresis.
@@ -87,11 +115,11 @@ class Ecu:
         elif speed_rad_s < self._rev_resume_rad_s:
             self._limiter_cut = False
 
-    def _update_overrun_cut(self, speed_rad_s: float, throttle: float) -> None:
-        # Cut when coasting with closed throttle; resume below the exit speed (before idle,
-        # so the engine catches itself) or as soon as the driver opens the throttle.
+    def _update_overrun(self, speed_rad_s: float, throttle: float) -> None:
+        # Overrun = coasting with closed throttle above enter speed; it ends below the exit
+        # speed (before idle, so the engine catches itself) or when the throttle opens.
         closed = throttle <= self._overrun.closed_throttle
         if not closed or speed_rad_s < self._overrun.exit_rad_s:
-            self._overrun_cut = False
+            self._in_overrun = False
         elif speed_rad_s > self._overrun.enter_rad_s:
-            self._overrun_cut = True
+            self._in_overrun = True

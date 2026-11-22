@@ -18,6 +18,15 @@ describe('parseServerMessage', () => {
     });
   });
 
+  it('accepts overrun settings and rejects them without a boolean fuel cut', () => {
+    const valid =
+      '{"v":1,"type":"overrunSettings","payload":{"fuelCut":false,"retard_deg":35,"enrichment_pct":10}}';
+    expect(parseServerMessage(valid).kind).toBe('message');
+    const invalid =
+      '{"v":1,"type":"overrunSettings","payload":{"fuelCut":"no","retard_deg":35,"enrichment_pct":10}}';
+    expect(parseServerMessage(invalid).kind).toBe('invalid');
+  });
+
   it('ignores unknown message types (forward compatibility)', () => {
     expect(parseServerMessage('{"v":1,"type":"turboState","payload":{}}').kind).toBe('ignored');
   });

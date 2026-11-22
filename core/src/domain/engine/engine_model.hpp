@@ -32,6 +32,8 @@ struct EngineOutputs {
     double brakeTorque_Nm;
     double exhaustPressure_Pa;
     double exhaustTemperature_K;
+    double lateCombustionFraction;     // share of burned fuel still burning at EVO (§2.10a)
+    double afterburnTemperatureRise_K; // extra catalyst heat from afterburn (§2.10a)
 };
 
 /// rho = p / (R T) (research.md §2.1).

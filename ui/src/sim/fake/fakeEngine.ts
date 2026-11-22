@@ -43,6 +43,7 @@ const IAT_AMBIENT_C = 25;
 const IAT_FULL_LOAD_RISE_C = 14;
 
 const LAMBDA_NOISE = 0.004;
+const CATALYST_SHARE_OF_EGT = 0.85;
 const RPM_NOISE = 4;
 
 /** Mechanical losses so that torque at a closed throttle becomes negative (engine braking). */
@@ -161,6 +162,9 @@ export class FakeEngine {
       sweepProgress: this.sweepProgress,
       cutActive: this.limiterCut,
       iat_C: this.iat_C,
+      // Rough stand-in: the catalyst sits a little below the exhaust temperature.
+      catalyst_C: this.egt_C * CATALYST_SHARE_OF_EGT,
+      overrunFueling: false,
     };
   }
 

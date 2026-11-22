@@ -58,6 +58,16 @@ struct OverrunCutParameters {
     double closedThrottle = 0.0; // throttle positions at or below this count as closed
 };
 
+/// Late combustion, afterburn and catalyst temperature (research.md §2.10a).
+struct AfterburnParameters {
+    double lateCombustionStart_deg = 0.0;
+    double lateCombustionSpan_deg = 1.0;
+    double lateCombustionMax = 0.0;
+    double afterburnEfficiency = 0.0;
+    double catalystTimeConstant_s = 1.0;
+    double catalystInitial_K = 0.0;
+};
+
 /// Exhaust pipes as far as the sound model needs them (research.md §6.3, plan.md §5.2).
 /// Cylinder numbers in collectorGroups are 1-based, like the firing order.
 struct ExhaustGeometry {
@@ -92,6 +102,7 @@ struct EngineDefinition {
     EngineTables tables;
     ExhaustGeometry exhaustGeometry;
     OverrunCutParameters overrunCut;
+    AfterburnParameters afterburn;
 
     /// V_d = z pi/4 B^2 S (research.md §1.4).
     [[nodiscard]] double displacement_m3() const noexcept {

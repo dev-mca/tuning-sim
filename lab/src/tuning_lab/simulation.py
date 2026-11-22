@@ -38,6 +38,7 @@ class SimulationState:
     load_torque_nm: float
     command: EcuCommand
     engine: EngineOutputs
+    catalyst_temperature_k: float
 
 
 class EngineSimulation:
@@ -66,6 +67,7 @@ class EngineSimulation:
         )
         self._manifold_pressure_pa = AMBIENT_PRESSURE_PA
         self._manifold_temperature_k = AMBIENT_TEMPERATURE_K
+        self._catalyst_temperature_k = definition.afterburn.catalyst_initial_k
 
     @property
     def time_step_s(self) -> float:
@@ -98,6 +100,7 @@ class EngineSimulation:
         # Semi-implicit Euler for the crank: new speed from the current torque balance.
         acceleration = (outputs.brake_torque_nm - load_torque_nm) / self._definition.inertia_kg_m2
         self._speed_rad_s = max(0.0, self._speed_rad_s + dt * acceleration)
+        self._update_catalyst(outputs, dt)
         self._time_s += dt
         return SimulationState(
             time_s=self._time_s,
@@ -107,6 +110,16 @@ class EngineSimulation:
             load_torque_nm=load_torque_nm,
             command=command,
             engine=outputs,
+            catalyst_temperature_k=self._catalyst_temperature_k,
+        )
+
+    def _update_catalyst(self, outputs: EngineOutputs, dt: float) -> None:
+        """First-order lag towards exhaust temperature plus afterburn (research.md §2.10a)."""
+        target = outputs.exhaust_temperature_k + outputs.afterburn_temperature_rise_k
+        time_constant = self._definition.afterburn.catalyst_time_constant_s
+        self._catalyst_temperature_k = (
+            self._catalyst_temperature_k
+            + dt * (target - self._catalyst_temperature_k) / time_constant
         )
 
     def _integrate_manifold(self, throttle: float, dt: float) -> None:

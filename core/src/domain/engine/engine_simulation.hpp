@@ -26,6 +26,7 @@ struct SimulationState {
     double loadTorque_Nm;
     EcuCommand command;
     EngineOutputs engine;
+    double catalystTemperature_K;
 };
 
 class EngineSimulation {
@@ -48,6 +49,7 @@ public:
 
 private:
     void integrateManifold(double throttle, double dt) noexcept;
+    void updateCatalyst(const EngineOutputs& outputs, double dt) noexcept;
 
     EngineDefinition definition_;
     EngineModel model_;
@@ -57,6 +59,7 @@ private:
     double speed_rad_s_;
     double manifoldPressure_Pa_;
     double manifoldTemperature_K_;
+    double catalystTemperature_K_;
 };
 
 } // namespace simcore

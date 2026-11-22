@@ -1,22 +1,41 @@
 #pragma once
 
 // Minimal speed-density ECU (docs/research.md §2.2, §2.4, §3); port of lab ecu.py.
-// Rev limiter (fuel cut with hysteresis) and overrun fuel cut (research.md §3.3).
+// Rev limiter (fuel cut with hysteresis) and overrun fuel cut (research.md §3.3). With the cut
+// switched off the ECU keeps fuelling in overrun with optional retard and extra fuel: the
+// "pops & bangs" map (research.md §3.3, §2.10a).
 // Concepts as in Speeduino/rusEFI, no code taken from them (GPL).
 
 #include "domain/ecu/table.hpp"
 #include "domain/engine/engine_definition.hpp"
 
+#include <string>
+
 namespace simcore {
 
-/// The tables the user tunes. Axes and units as in EngineTables.
+/// What the ECU does when the driver lifts off at speed (research.md §3.3).
+struct OverrunSettings {
+    bool fuelCut = true;     // false: keep fuelling in overrun (needed for pops)
+    double retard_deg = 0.0; // ignition taken back from the map while fuelling in overrun
+    double enrichment = 0.0; // extra fuel while fuelling in overrun, fraction (0.1 = +10 %)
+};
+
+/// Allowed ranges of the overrun settings; outside them the ECU rejects the change.
+inline constexpr double kMaxOverrunRetard_deg = 60.0;
+inline constexpr double kMaxOverrunEnrichment = 0.5;
+
+/// Empty if the settings are valid, otherwise the reason.
+[[nodiscard]] std::string validateOverrunSettings(const OverrunSettings& settings);
+
+/// The tables and settings the user tunes. Axes and units as in EngineTables.
 struct Tune {
     Table2D ve;
     Table2D lambdaTarget;
     Table2D ignition;
+    OverrunSettings overrun;
 
     [[nodiscard]] static Tune fromTables(const EngineTables& tables) {
-        return {tables.ve, tables.lambdaTarget, tables.ignition};
+        return {tables.ve, tables.lambdaTarget, tables.ignition, {}};
     }
 };
 
@@ -25,6 +44,7 @@ struct EcuCommand {
     double ignition_deg;
     double lambdaTarget;
     bool fuelCut;
+    bool overrunFueling = false; // fuelling in overrun with the cut switched off: pops possible
 };
 
 class Ecu {
@@ -41,7 +61,7 @@ public:
 
 private:
     void updateRevLimiter(double speed_rad_s) noexcept;
-    void updateOverrunCut(double speed_rad_s, double throttle) noexcept;
+    void updateOverrun(double speed_rad_s, double throttle) noexcept;
 
     Tune tune_;
     double displacement_m3_;
@@ -49,7 +69,7 @@ private:
     double revResume_rad_s_;
     OverrunCutParameters overrun_;
     bool limiterCut_ = false;
-    bool overrunCut_ = false;
+    bool inOverrun_ = false;
 };
 
 } // namespace simcore

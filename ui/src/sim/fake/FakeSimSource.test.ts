@@ -186,3 +186,38 @@ describe('FakeSimSource', () => {
     expect(statuses.at(-1)).toBe('disconnected');
   });
 });
+
+describe('FakeSimSource overrun settings', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reports, validates, stores and broadcasts overrun settings', () => {
+    const { source, messages } = connectedSource();
+    send(source, { type: 'getOverrunSettings', id: 'g', payload: {} });
+    send(source, {
+      type: 'setOverrunSettings',
+      id: 'bad',
+      payload: { fuelCut: false, retard_deg: 80, enrichment_pct: 10 },
+    });
+    send(source, {
+      type: 'setOverrunSettings',
+      id: 'ok',
+      payload: { fuelCut: false, retard_deg: 35, enrichment_pct: 10 },
+    });
+    vi.advanceTimersByTime(0);
+    const settings = ofType(messages, 'overrunSettings');
+    expect(settings[0]?.id).toBe('g');
+    expect(settings[0]?.payload.fuelCut).toBe(true);
+    expect(ofType(messages, 'error').map((error) => error.id)).toEqual(['bad']);
+    expect(settings.at(-1)?.payload).toEqual({
+      fuelCut: false,
+      retard_deg: 35,
+      enrichment_pct: 10,
+    });
+  });
+});

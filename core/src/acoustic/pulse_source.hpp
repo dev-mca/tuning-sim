@@ -4,6 +4,7 @@
 #include "dsp/random.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -24,7 +25,11 @@ public:
 
     /// Advances one sample and writes one pressure value per cylinder into `out`.
     /// `load` in [0, 1] scales the pulse amplitude (cylinder pressure at EVO).
-    void process(double speed_rpm, float load, std::span<float> out) noexcept;
+    /// Returns a bit mask of the cylinders whose exhaust valve opened in this sample.
+    std::uint32_t process(double speed_rpm, float load, std::span<float> out) noexcept;
+
+    /// Bit masks returned by process() cover at most this many cylinders.
+    static constexpr std::size_t kMaxCylinders = 32;
 
     /// Standard deviation of the cycle-to-cycle amplitude variation, applied from the next pulse
     /// on. Lean mixtures burn less evenly and sound rougher (research.md §6.2 step 3).

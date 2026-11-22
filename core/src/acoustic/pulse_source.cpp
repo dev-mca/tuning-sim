@@ -76,7 +76,7 @@ float PulseSource::pulseShape(double phase, double riseFraction) noexcept {
     return static_cast<float>(value);
 }
 
-void PulseSource::process(double speed_rpm, float load, std::span<float> out) noexcept {
+std::uint32_t PulseSource::process(double speed_rpm, float load, std::span<float> out) noexcept {
     const double step_deg = speed_rpm / kSecondsPerMinute * kDegPerRevolution / sampleRate_;
     const double previous = crankAngle_deg_;
     const double now = static_cast<double>(sampleIndex_);
@@ -87,6 +87,7 @@ void PulseSource::process(double speed_rpm, float load, std::span<float> out) no
         (1.0 + kSoftWidening * softness) * sampleRate_;
     const double riseFraction = kRiseFraction + (kSoftRiseFraction - kRiseFraction) * softness;
     const float loadAmplitude = kMinLoadAmplitude + (1.0F - kMinLoadAmplitude) * load;
+    std::uint32_t opened = 0;
 
     for (std::size_t k = 0; k < cylinders_.size(); ++k) {
         Cylinder& cylinder = cylinders_[k];
@@ -100,6 +101,9 @@ void PulseSource::process(double speed_rpm, float load, std::span<float> out) no
         if (cylinder.armed && fraction > 0.0) {
             cylinder.armed = false;
             cylinder.active = true;
+            if (k < kMaxCylinders) {
+                opened |= 1U << k;
+            }
             cylinder.pulseStart = now - 1.0 + fraction; // between the previous and this sample
             cylinder.pulseDuration = durationSamples;
             cylinder.riseFraction = riseFraction;
@@ -117,6 +121,7 @@ void PulseSource::process(double speed_rpm, float load, std::span<float> out) no
     }
     crankAngle_deg_ = wrapAngle(previous + step_deg);
     ++sampleIndex_;
+    return opened;
 }
 
 } // namespace simcore::acoustic

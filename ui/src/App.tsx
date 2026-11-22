@@ -11,6 +11,7 @@ import { DynoPanel } from './ui/dyno/DynoPanel.tsx';
 import { GaugeCluster } from './ui/gauges/GaugeCluster.tsx';
 import { ConnectionBanner } from './ui/layout/ConnectionBanner.tsx';
 import { Toast } from './ui/layout/Toast.tsx';
+import { OverrunPanel } from './ui/overrun/OverrunPanel.tsx';
 import { TablePanel } from './ui/table/TablePanel.tsx';
 
 /**
@@ -68,7 +69,10 @@ function Cockpit({ onSourceChange }: { onSourceChange: (kind: SourceKind) => voi
       />
       <GaugeCluster />
       <main className="grid flex-1 grid-cols-1 gap-4 xl:grid-cols-2">
-        <TablePanel />
+        <div className="flex min-w-0 flex-col gap-4">
+          <TablePanel />
+          <OverrunPanel />
+        </div>
         <DynoPanel />
       </main>
       <ControlBar onSourceChange={onSourceChange} />

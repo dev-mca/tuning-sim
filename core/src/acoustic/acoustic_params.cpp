@@ -19,6 +19,7 @@ double radSToRpm(double speed_rad_s) {
 SoundTarget soundTargetFor(const AcousticParams& params) noexcept {
     SoundTarget target;
     target.speed_rpm = std::max(0.0, radSToRpm(params.speed_rad_s));
+    target.afterburnRate = static_cast<float>(std::clamp(params.afterburnRate, 0.0, 1.0));
     if (params.fuelCut || !std::isfinite(params.lambda)) {
         target.load = 0.0F; // PulseSource keeps a minimum amplitude for the pumping pulses
         target.brightness = kFuelCutBrightness;

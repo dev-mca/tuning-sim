@@ -31,6 +31,15 @@
     "exit_rpm": 1100,
     "closedThrottle": 0.02
   },
+  "afterburn": {
+    "_assumption": "research.md §2.10a: share of fuel still burning at EVO grows above 25 deg retard vs MBT (idle torque reserve is 20 deg and must not count), up to 60 % at 37 deg; half of it burns in the exhaust; catalyst follows the exhaust temperature with 10 s. Tuned assumptions [prüfen]. The catalyst starts warm (engine already driven), but below the light-off for pops.",
+    "lateCombustionStart_deg": 25.0,
+    "lateCombustionSpan_deg": 20.0,
+    "lateCombustionMax": 0.6,
+    "afterburnEfficiency": 0.5,
+    "catalystTimeConstant_s": 10.0,
+    "catalystInitial_C": 430.0
+  },
   "inertia_kg_m2": 0.20,
   "_assumption_inertia": "Crank train plus dual-mass flywheel, research.md §2.11 gives 0.15-0.25 kg m^2.",
   "intake": {

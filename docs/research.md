@@ -176,6 +176,24 @@ Energiebilanz: Kraftstoffenergie = Arbeit + Kühlung + Abgas. Einfacher Ansatz:
 
 mit η_i,eff = η_i,base · η_ign · η_λ und η_cool ≈ 0,25–0,30. Ergebnis soll im Bereich 700–950 °C bei Volllast liegen, sonst η_cool anpassen.
 
+### 2.10a Unverbrannter Kraftstoff, Nachverbrennung und Katalysator (Iteration 7b)
+Zwei Wege führen Kraftstoff unverbrannt in den Auspuff:
+1. **Zu fett** (λ < 1): Es fehlt Sauerstoff, der Überschuss m_fuel − m_air/AFR_st kann auch im Auspuff nicht verbrennen (kein O₂).
+2. **Zu spät gezündet:** Liegt die Zündung weit hinter MBT, ist die Verbrennung beim Öffnen des Auslassventils (EVO) noch nicht fertig. Das unverbrannte Gemisch bringt seinen Sauerstoff mit und kann im heissen Krümmer oder Kat **nachverbrennen** (Knall, «Pop»).
+
+Modell für den späten Anteil (grobe, abgestimmte Annahme **[prüfen]**):
+
+  f_late = clamp((Δθ − θ₀) / θ_span, 0, f_max),  Δθ = θ_MBT − θ_ign
+
+mit θ₀ ≈ 25° (bis dahin brennt alles im Zylinder aus; die Leerlauf-Momentenreserve von ~20° darf noch nicht zählen), θ_span ≈ 20°, f_max ≈ 0,6. Nachverbrennende Masse m_ab = f_late · m_fuel,burned. Das MVM-Moment ändert sich dadurch nicht, der Momentenverlust steckt schon in η_ign (§2.7).
+
+**Katalysatortemperatur** als träges Glied erster Ordnung (Wärmekapazität des Kats):
+
+  dT_cat/dt = (T_cat,target − T_cat) / τ_cat,  T_cat,target = T_exh + ΔT_ab
+  ΔT_ab = η_ab · m_ab · H_u / (m_exh · c_p,exh)
+
+mit τ_cat ≈ 10 s und η_ab ≈ 0,5 (Anteil, der wirklich nachverbrennt). Während der Schubabschaltung fliesst nur kühle Luft durch, der Kat kühlt ab. Bei kaltem Kat (< ~480 °C) entzündet sich das Gemisch im Auspuff kaum; voll «knallbereit» ist er ab ~630 °C. Das ist auch der Grund, warum Serien-ECUs nach einem Kaltstart den Leerlauf anheben und spät zünden: Das heisse Abgas heizt den Kat schnell auf (Backlog).
+
 ### 2.11 Drehdynamik
   J_eng · dω/dt = T_e − T_load
 
@@ -215,6 +233,7 @@ In echten ECUs (Speeduino) sind VE und Zündung typischerweise 16 × 16 Tabellen
 - **Boost-Regelung:** Open Loop (Duty-Tabelle) + PID auf das Boost-Ziel. Ein falsch eingestellter PID schwingt, genau das soll man sehen können.
 - **Klopfregelung:** bei Klopfen Zündung pro Ereignis um z. B. 1,5–3° zurücknehmen, danach langsam wieder heranführen.
 - **Drehzahlbegrenzer:** harte Kraftstoffabschaltung oder Zündunterbrechung (klingt anders: Zündunterbrechung schickt unverbranntes Gemisch in den Auspuff → Knallen).
+- **Pops & Bangs (Overrun-Map):** statt Schubabschaltung im Schub weiter einspritzen, die Zündung stark zurücknehmen (25–40° gegenüber der Kennfeldzündung) und eventuell anfetten. Die späte Verbrennung schickt zündfähiges Gemisch in den heissen Auspuff (§2.10a), wo es knallt. Kostet Kraftstoff, heizt Kat und Krümmer stark auf. In tuning-sim drei Tune-Einstellungen: Schubabschaltung ein/aus, Schub-Spätzündung (°), Schub-Anfettung (%).
 - **Schubabschaltung (DFCO):** Drosselklappe geschlossen und Drehzahl über einer Einschaltschwelle → kein Kraftstoff. Wieder an unter einer Wiedereinsetzschwelle oberhalb des Leerlaufs (sonst stirbt der Motor ab) oder sobald Gas gegeben wird. Typisch: ein ~1500/min, aus ~1100/min. Spart Kraftstoff und bremst; im Sound bleiben nur schwache Pumpstösse.
 
 ### 3.4 Tuning-Funktionen (ab Iteration 10)

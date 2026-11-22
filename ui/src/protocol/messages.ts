@@ -84,6 +84,20 @@ export interface EngineState {
   cutActive: boolean;
   /** Intake air temperature. Not sent by simcore yet (protocol v1 allows new fields). */
   iat_C?: number;
+  /** Catalyst temperature (since iteration 7b). */
+  catalyst_C?: number;
+  /** True while the ECU fuels in overrun with the fuel cut switched off: pops possible. */
+  overrunFueling?: boolean;
+}
+
+/** What the ECU does when the driver lifts off at speed (research.md §3.3). */
+export interface OverrunSettings {
+  /** true = stock fuel cut; false = keep fuelling (needed for pops). */
+  fuelCut: boolean;
+  /** Ignition taken back from the map while fuelling in overrun. */
+  retard_deg: number;
+  /** Extra fuel while fuelling in overrun. */
+  enrichment_pct: number;
 }
 
 export interface DynoProgressPayload {
@@ -125,6 +139,7 @@ export type AckMessage = Envelope<'ack', Record<string, never>>;
 export type ErrorMessage = Envelope<'error', { message: string }>;
 export type DynoProgressMessage = Envelope<'dynoProgress', DynoProgressPayload>;
 export type DynoResultMessage = Envelope<'dynoResult', DynoResultPayload>;
+export type OverrunSettingsMessage = Envelope<'overrunSettings', OverrunSettings>;
 
 /** Everything simcore can send to the UI. */
 export type ServerMessage =
@@ -134,7 +149,8 @@ export type ServerMessage =
   | AckMessage
   | ErrorMessage
   | DynoProgressMessage
-  | DynoResultMessage;
+  | DynoResultMessage
+  | OverrunSettingsMessage;
 
 export interface StartSweepPayload {
   rpmFrom: number;
@@ -150,7 +166,9 @@ export type ClientMessage =
   | Envelope<'stopSweep', Record<string, never>>
   | Envelope<'getTable', { id: TableId }>
   | Envelope<'setTableCells', { id: TableId; cells: CellValue[] }>
-  | Envelope<'setAudio', AudioSettings>;
+  | Envelope<'setAudio', AudioSettings>
+  | Envelope<'getOverrunSettings', Record<string, never>>
+  | Envelope<'setOverrunSettings', OverrunSettings>;
 
 /** Volume 0..1; mute keeps the volume for later. */
 export interface AudioSettings {

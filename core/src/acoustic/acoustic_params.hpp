@@ -19,6 +19,8 @@ struct AcousticParams {
     double lambda = 1.0;
     /// True while the ECU cuts fuel (rev limiter or overrun): no combustion, only pumping.
     bool fuelCut = false;
+    /// Probability per exhaust event that unburnt mixture bangs in the exhaust (0..1).
+    double afterburnRate = 0.0;
 };
 
 /// Maps the engine's operating point to the sound (research.md §6.2 step 3):

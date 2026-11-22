@@ -1,5 +1,6 @@
 #pragma once
 
+#include "acoustic/afterburn.hpp"
 #include "acoustic/exhaust_network.hpp"
 #include "acoustic/layout.hpp"
 #include "acoustic/pulse_source.hpp"
@@ -23,6 +24,8 @@ struct SoundTarget {
     float brightness = 1.0F;
     /// Cycle-to-cycle amplitude variation (standard deviation), see PulseSource.
     float cycleVariation = PulseSource::kDefaultAmplitudeVariation;
+    /// Probability (0..1) that an exhaust valve opening is followed by an afterburn bang.
+    float afterburnRate = 0.0F;
 };
 
 /// Complete exhaust sound of one engine layout (research.md §6.2-6.4, §6.8).
@@ -60,6 +63,9 @@ public:
     static constexpr float kMaxLoad = 1.3F;
     /// The tone filter never goes below this, even when very dull.
     static constexpr float kMinToneCutoffHz = 400.0F;
+    /// Level of afterburn bangs relative to the exhaust pulses (before kOutputGain): a big
+    /// bang lands near full scale, small crackles clearly above the coasting engine.
+    static constexpr float kBangGain = 0.03F;
     // Calibrated: full load at high speed gives about -16 dBFS RMS, peaks below 0.8.
     static constexpr float kOutputGain = 12.0F;
 
@@ -75,6 +81,7 @@ private:
 
     float sampleRate_;
     PulseSource pulses_;
+    AfterburnSource afterburn_;
     ExhaustNetwork exhaust_;
     std::vector<float> sources_; // one value per cylinder, reused every sample
     SlewSmoother speed_;

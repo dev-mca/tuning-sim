@@ -1,4 +1,4 @@
-import type { CellValue, TableData, TableId } from '../protocol/messages.ts';
+import type { CellValue, OverrunSettings, TableData, TableId } from '../protocol/messages.ts';
 
 /**
  * Tune file: the editable ECU tables of one engine as JSON (ADR 0006). The axes are stored
@@ -21,6 +21,8 @@ export interface TuneFile {
   engine: string;
   savedAt: string;
   tables: Record<TableId, TuneTable>;
+  /** ECU overrun (pops & bangs) settings; optional, older tune files have none. */
+  overrun?: OverrunSettings;
 }
 
 /** A tune file that cannot be used; the message is shown to the user. */
@@ -33,6 +35,7 @@ export function createTuneFile(
   engineId: string,
   tables: Iterable<TableData>,
   savedAt: Date,
+  overrun?: OverrunSettings,
 ): TuneFile {
   const entries = [...tables]
     .filter((table) => table.editable)
@@ -51,6 +54,7 @@ export function createTuneFile(
     engine: engineId,
     savedAt: savedAt.toISOString(),
     tables: Object.fromEntries(entries),
+    ...(overrun === undefined ? {} : { overrun: { ...overrun } }),
   };
 }
 
@@ -86,6 +90,9 @@ export function parseTuneFile(text: string): TuneFile {
     if (!isTuneTable(table)) {
       throw new TuneFileError(`table '${id}' is malformed`);
     }
+  }
+  if (data.overrun !== undefined && !isOverrunSettings(data.overrun)) {
+    throw new TuneFileError('overrun settings are malformed');
   }
   return data as unknown as TuneFile;
 }
@@ -168,6 +175,17 @@ function isTuneTable(value: unknown): value is TuneTable {
     Array.isArray(values) &&
     values.length === yBins.length &&
     values.every((row) => isNumberArray(row) && row.length === xBins.length)
+  );
+}
+
+function isOverrunSettings(value: unknown): value is OverrunSettings {
+  return (
+    isRecord(value) &&
+    typeof value.fuelCut === 'boolean' &&
+    typeof value.retard_deg === 'number' &&
+    Number.isFinite(value.retard_deg) &&
+    typeof value.enrichment_pct === 'number' &&
+    Number.isFinite(value.enrichment_pct)
   );
 }
 

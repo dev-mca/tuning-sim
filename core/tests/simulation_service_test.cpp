@@ -185,3 +185,33 @@ TEST_CASE("setAudio reaches the sound and is acknowledged, also without sound") 
     runSteps(withoutSound, 1);
     CHECK(silentBus.count<Ack>() == 1);
 }
+
+TEST_CASE("overrun settings are read, validated, applied and broadcast") {
+    FakeBus bus;
+    SimulationService service(test::referenceEngine(), bus, bus);
+    bus.push(GetOverrunSettings{}, "get");
+    runSteps(service, 1);
+    REQUIRE(bus.count<OverrunSettingsData>() == 1);
+    CHECK(std::get<OverrunSettingsData>(bus.sent.back().payload).settings.fuelCut);
+
+    bus.push(SetOverrunSettings{{false, 70.0, 0.1}}, "bad");
+    runSteps(service, 1);
+    CHECK(bus.count<ErrorReply>() == 1);
+    CHECK(service.simulation().ecu().tune().overrun.fuelCut); // unchanged
+
+    bus.push(SetOverrunSettings{{false, 35.0, 0.1}}, "good");
+    runSteps(service, 1);
+    CHECK_FALSE(service.simulation().ecu().tune().overrun.fuelCut);
+    CHECK(service.simulation().ecu().tune().overrun.retard_deg == 35.0);
+    CHECK(bus.count<Ack>() == 1);
+    REQUIRE(bus.count<OverrunSettingsData>() == 2);
+    CHECK(bus.sent.back().clientId.empty()); // broadcast to every client
+}
+
+TEST_CASE("state reports catalyst temperature and overrun fuelling") {
+    FakeBus bus;
+    SimulationService service(test::referenceEngine(), bus, bus);
+    runSteps(service, 10);
+    CHECK(bus.lastState.catalystTemperature_K > 600.0);
+    CHECK_FALSE(bus.lastState.overrunFueling);
+}

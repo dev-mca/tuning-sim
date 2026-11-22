@@ -2,6 +2,7 @@ import { applyCells } from '../../domain/tableEdit.ts';
 import {
   type CellValue,
   type ClientMessage,
+  type OverrunSettings,
   PROTOCOL_VERSION,
   type ServerMessage,
   type StartSweepPayload,
@@ -20,6 +21,9 @@ const TICKS_PER_PROGRESS = 6;
 /** Lowest start speed for a sweep; below idle the dyno would stall the engine. */
 const MIN_SWEEP_RPM = 500;
 const FAKE_VERSION = 'fake-0.1.0';
+/** Same limits as simcore (core/src/domain/ecu/ecu.hpp). */
+const MAX_OVERRUN_RETARD_DEG = 60;
+const MAX_OVERRUN_ENRICHMENT_PCT = 50;
 const DEFAULT_SEED = 1;
 
 export interface FakeSimSourceOptions {
@@ -43,6 +47,8 @@ export class FakeSimSource implements SimSource {
   private timer: ReturnType<typeof setInterval> | undefined;
   private tick = 0;
   private sweepRange = { rpmFrom: 0, rpmTo: 0 };
+  /** Stored and echoed only: the fake has no afterburn physics and no sound. */
+  private overrun: OverrunSettings = { fuelCut: true, retard_deg: 0, enrichment_pct: 0 };
 
   constructor(options: FakeSimSourceOptions = {}) {
     this.reference = toTableSet(referenceTables());
@@ -113,6 +119,17 @@ export class FakeSimSource implements SimSource {
       case 'setAudio':
         this.ack(message.id); // the fake has no sound; accepting keeps the UI simple
         return;
+      case 'getOverrunSettings':
+        this.emit({
+          v: PROTOCOL_VERSION,
+          type: 'overrunSettings',
+          id: message.id,
+          payload: this.overrun,
+        });
+        return;
+      case 'setOverrunSettings':
+        this.setOverrun(message.payload, message.id);
+        return;
     }
   }
 
@@ -132,6 +149,21 @@ export class FakeSimSource implements SimSource {
     this.engine.startSweep(request);
     this.sweepRange = { rpmFrom, rpmTo };
     this.ack(id);
+  }
+
+  private setOverrun(settings: OverrunSettings, id: string | undefined): void {
+    const { retard_deg, enrichment_pct } = settings;
+    if (!(retard_deg >= 0 && retard_deg <= MAX_OVERRUN_RETARD_DEG)) {
+      this.error(id, 'overrun retard must be 0..60 deg');
+      return;
+    }
+    if (!(enrichment_pct >= 0 && enrichment_pct <= MAX_OVERRUN_ENRICHMENT_PCT)) {
+      this.error(id, 'overrun enrichment must be 0..50 %');
+      return;
+    }
+    this.overrun = { ...settings };
+    this.ack(id);
+    this.emit({ v: PROTOCOL_VERSION, type: 'overrunSettings', payload: this.overrun });
   }
 
   private sendTable(tableId: TableId, id: string | undefined): void {

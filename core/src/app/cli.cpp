@@ -68,6 +68,15 @@ CliParseResult parseCommandLine(const std::vector<std::string>& arguments) {
                 options.soundSweepFile = reader.value(option);
                 options.sweepFrom_rpm = kSoundSweepFrom_rpm;
                 options.sweepTo_rpm = kSoundSweepTo_rpm;
+            } else if (option == "--sound-blips") {
+                options.mode = CliMode::SoundBlips;
+                options.soundBlipsFile = reader.value(option);
+            } else if (option == "--no-overrun-cut") {
+                options.overrunFuelCut = false;
+            } else if (option == "--overrun-retard") {
+                options.overrunRetard_deg = parseNumber(reader.value(option), option);
+            } else if (option == "--overrun-enrichment") {
+                options.overrunEnrichment = parseNumber(reader.value(option), option);
             } else if (option == "--ignition-offset") {
                 options.ignitionOffset_deg = parseNumber(reader.value(option), option);
             } else if (option == "--no-audio") {
@@ -91,6 +100,9 @@ std::string usageText() {
            "                                             full-load dyno sweep as CSV on stdout\n"
            "  simcore --sound-sweep <file.wav> [--ignition-offset <deg>] [--rate <rpm/s>]\n"
            "                                             engine sound of a full-load sweep\n"
+           "  simcore --sound-blips <file.wav> [--no-overrun-cut] [--overrun-retard <deg>]\n"
+           "                        [--overrun-enrichment <fraction>]\n"
+           "                                             throttle blips: limiter and overrun\n"
            "  simcore --version | --help\n"
            "options:\n"
            "  --shared <dir>   folder with engines/ and tables/ (default: repository shared/)\n"

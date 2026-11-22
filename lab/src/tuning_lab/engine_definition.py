@@ -64,6 +64,18 @@ class OverrunCutParameters:
 
 
 @dataclass(frozen=True)
+class AfterburnParameters:
+    """Late combustion, afterburn and catalyst temperature (research.md §2.10a)."""
+
+    late_combustion_start_deg: float
+    late_combustion_span_deg: float
+    late_combustion_max: float
+    afterburn_efficiency: float
+    catalyst_time_constant_s: float
+    catalyst_initial_k: float
+
+
+@dataclass(frozen=True)
 class EngineDefinition:
     id: str
     name: str
@@ -84,6 +96,7 @@ class EngineDefinition:
     exhaust_backpressure_coefficient: float
     tables: EngineTables
     overrun_cut: OverrunCutParameters
+    afterburn: AfterburnParameters
 
     @property
     def displacement_m3(self) -> float:
@@ -154,5 +167,15 @@ def _engine_from_dict(data: dict[str, Any], shared_dir: Path) -> EngineDefinitio
             enter_rad_s=units.rpm_to_rad_s(float(data["overrunFuelCut"]["enter_rpm"])),
             exit_rad_s=units.rpm_to_rad_s(float(data["overrunFuelCut"]["exit_rpm"])),
             closed_throttle=float(data["overrunFuelCut"]["closedThrottle"]),
+        ),
+        afterburn=AfterburnParameters(
+            late_combustion_start_deg=float(data["afterburn"]["lateCombustionStart_deg"]),
+            late_combustion_span_deg=float(data["afterburn"]["lateCombustionSpan_deg"]),
+            late_combustion_max=float(data["afterburn"]["lateCombustionMax"]),
+            afterburn_efficiency=float(data["afterburn"]["afterburnEfficiency"]),
+            catalyst_time_constant_s=float(data["afterburn"]["catalystTimeConstant_s"]),
+            catalyst_initial_k=units.celsius_to_kelvin(
+                float(data["afterburn"]["catalystInitial_C"])
+            ),
         ),
     )
