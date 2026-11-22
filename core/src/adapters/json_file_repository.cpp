@@ -84,6 +84,15 @@ ExhaustGeometry parseExhaustGeometry(const json& exhaust) {
             exhaust.at("tailpipeDiameter_m").get<double>()};
 }
 
+AfterburnParameters parseAfterburn(const json& afterburn) {
+    return {afterburn.at("lateCombustionStart_deg").get<double>(),
+            afterburn.at("lateCombustionSpan_deg").get<double>(),
+            afterburn.at("lateCombustionMax").get<double>(),
+            afterburn.at("afterburnEfficiency").get<double>(),
+            afterburn.at("catalystTimeConstant_s").get<double>(),
+            units::celsiusToKelvin(afterburn.at("catalystInitial_C").get<double>())};
+}
+
 /// Every cylinder needs a primary pipe and must flow into exactly one collector group.
 void validateExhaustGeometry(const ExhaustGeometry& exhaust, int cylinders) {
     if (exhaust.primaryLength_m.size() != static_cast<std::size_t>(cylinders)) {
@@ -158,7 +167,8 @@ LoadedEngine JsonFileRepository::load(const std::string& engineId) const {
             parseExhaustGeometry(data.at("exhaust")),
             {rpm(data.at("overrunFuelCut"), "enter_rpm"),
              rpm(data.at("overrunFuelCut"), "exit_rpm"),
-             data.at("overrunFuelCut").at("closedThrottle").get<double>()}};
+             data.at("overrunFuelCut").at("closedThrottle").get<double>()},
+            parseAfterburn(data.at("afterburn"))};
 
         const auto cylinders = static_cast<std::size_t>(definition.cylinders);
         if (definition.firingOrder.size() != cylinders ||

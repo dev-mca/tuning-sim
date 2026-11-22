@@ -3,7 +3,10 @@
 // tighter tolerance and would reveal any accidental change in the physics.
 
 #include "adapters/sweep_csv.hpp"
+#include "domain/common/units.hpp"
 #include "domain/dyno/dyno.hpp"
+#include "domain/ecu/ecu.hpp"
+#include "domain/engine/engine_simulation.hpp"
 #include "test_support.hpp"
 
 #include <doctest/doctest.h>
@@ -82,4 +85,52 @@ TEST_CASE("full-load sweep matches the Python golden file") {
             CHECK(std::abs(row[c] - expected) <= tolerance);
         }
     }
+}
+
+TEST_CASE("overrun with a pops tune matches the Python golden file (research.md §2.10a)") {
+    const Csv golden = readCsv(test::sharedDir() + "/golden/i6_30_na_overrun.csv");
+    const std::vector<std::string> columns = {
+        "time_s",   "speed_rpm",      "map_kPa",          "throttle",
+        "fuelCut",  "overrunFueling", "ignition_degBTDC", "lateCombustion",
+        "egt_degC", "catalyst_degC",  "engineTorque_Nm"};
+    REQUIRE(golden.header == columns);
+
+    // Same scenario as OVERRUN_* in lab/src/tuning_lab/golden.py.
+    const EngineDefinition& engine = test::referenceEngine().definition;
+    Tune tune = Tune::fromTables(engine.tables);
+    tune.overrun = {false, 35.0, 0.1};
+    EngineSimulation simulation(engine, tune);
+    constexpr int kSteps = 6000;
+    constexpr int kSampleSteps = 50;
+    std::size_t row = 0;
+    for (int step = 0; step < kSteps; ++step) {
+        const double time_s = step * simulation.timeStep_s();
+        const double throttle = (time_s >= 0.5 && time_s < 1.3) ? 1.0 : 0.0;
+        const SimulationState state = simulation.step(throttle, 0.0);
+        if ((step + 1) % kSampleSteps != 0) {
+            continue;
+        }
+        REQUIRE(row < golden.rows.size());
+        const std::vector<double> actual = {
+            state.time_s,
+            units::radSToRpm(state.speed_rad_s),
+            units::paToKpa(state.manifoldPressure_Pa),
+            state.throttle,
+            state.command.fuelCut ? 1.0 : 0.0,
+            state.command.overrunFueling ? 1.0 : 0.0,
+            state.command.ignition_deg,
+            state.engine.lateCombustionFraction,
+            units::kelvinToCelsius(state.engine.exhaustTemperature_K),
+            units::kelvinToCelsius(state.catalystTemperature_K),
+            state.engine.brakeTorque_Nm};
+        for (std::size_t c = 0; c < actual.size(); ++c) {
+            const double expected = golden.rows[row][c];
+            const double tolerance = kAbsoluteTolerance + kRelativeTolerance * std::abs(expected);
+            CAPTURE(row);
+            CAPTURE(columns[c]);
+            CHECK(std::abs(actual[c] - expected) <= tolerance);
+        }
+        ++row;
+    }
+    CHECK(row == golden.rows.size());
 }

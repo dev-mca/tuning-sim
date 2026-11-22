@@ -18,7 +18,8 @@ EngineSimulation::EngineSimulation(const EngineDefinition& definition, std::opti
       timeStep_s_(timeStep_s),
       speed_rad_s_(initialSpeed_rad_s.value_or(definition.idleSpeed_rad_s)),
       manifoldPressure_Pa_(constants::kAmbientPressure_Pa),
-      manifoldTemperature_K_(constants::kAmbientTemperature_K) {}
+      manifoldTemperature_K_(constants::kAmbientTemperature_K),
+      catalystTemperature_K_(definition.afterburn.catalystInitial_K) {}
 
 SimulationState EngineSimulation::step(double throttle, double loadTorque_Nm) noexcept {
     const double dt = timeStep_s_;
@@ -31,8 +32,18 @@ SimulationState EngineSimulation::step(double throttle, double loadTorque_Nm) no
     // Semi-implicit Euler: new speed from the current torque balance.
     const double acceleration = (outputs.brakeTorque_Nm - loadTorque_Nm) / definition_.inertia_kgm2;
     speed_rad_s_ = std::max(0.0, speed_rad_s_ + dt * acceleration);
+    updateCatalyst(outputs, dt);
     time_s_ += dt;
-    return {time_s_, speed_rad_s_, manifoldPressure_Pa_, throttle, loadTorque_Nm, command, outputs};
+    return {time_s_, speed_rad_s_, manifoldPressure_Pa_,  throttle, loadTorque_Nm,
+            command, outputs,      catalystTemperature_K_};
+}
+
+void EngineSimulation::updateCatalyst(const EngineOutputs& outputs, double dt) noexcept {
+    // First-order lag towards exhaust temperature plus afterburn heat (research.md §2.10a).
+    const double target = outputs.exhaustTemperature_K + outputs.afterburnTemperatureRise_K;
+    const double timeConstant = definition_.afterburn.catalystTimeConstant_s;
+    catalystTemperature_K_ =
+        catalystTemperature_K_ + dt * (target - catalystTemperature_K_) / timeConstant;
 }
 
 void EngineSimulation::integrateManifold(double throttle, double dt) noexcept {

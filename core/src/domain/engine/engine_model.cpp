@@ -106,6 +106,21 @@ EngineOutputs EngineModel::evaluate(const OperatingPoint& point) const noexcept 
              ? exhaustHeatPerCycle / (exhaustMassPerCycle * constants::kCpExhaust_J_kgK)
              : 0.0);
 
+    // §2.10a: far behind MBT the combustion is not finished at EVO; that mixture can afterburn
+    // in the exhaust and heats the catalyst on top of the exhaust temperature.
+    const AfterburnParameters& afterburn = definition_.afterburn;
+    const double retard_deg = mbt_deg - point.ignition_deg;
+    const double lateFraction = std::min(std::max((retard_deg - afterburn.lateCombustionStart_deg) /
+                                                      afterburn.lateCombustionSpan_deg,
+                                                  0.0),
+                                         afterburn.lateCombustionMax);
+    const double afterburnHeatPerCycle = afterburn.afterburnEfficiency * lateFraction * fuelBurned *
+                                         constants::kLowerHeatingValueGasoline_J_kg;
+    const double afterburnRise =
+        exhaustMassPerCycle > 0.0
+            ? afterburnHeatPerCycle / (exhaustMassPerCycle * constants::kCpExhaust_J_kgK)
+            : 0.0;
+
     return {ve,
             airPerCycle,
             airFlow,
@@ -120,7 +135,9 @@ EngineOutputs EngineModel::evaluate(const OperatingPoint& point) const noexcept 
             accessoryTorque,
             brakeTorque,
             exhaustPressure,
-            exhaustTemperature};
+            exhaustTemperature,
+            lateFraction,
+            afterburnRise};
 }
 
 } // namespace simcore
