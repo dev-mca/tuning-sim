@@ -139,6 +139,9 @@ TEST_CASE("pedal steps and overrun fuel cut do not click") {
     CHECK(maxStep(sound) < kMaxClickStep);
     // Full load right after the tip-in is clearly louder than coasting without fuel.
     CHECK(rms(section(sound, 1.05, 1.2)) > 2.0 * rms(section(sound, 2.8, 3.5)));
+    // The few firings between limiter cuts reach full strength: the limiter stays within
+    // about 7 dB of the run-up instead of fading to a hiss (it fires only ~16 % of the time).
+    CHECK(rms(section(sound, 1.5, 2.5)) > 0.42 * rms(section(sound, 1.05, 1.2)));
 }
 
 TEST_CASE("the renderer is silent until the simulation sends parameters") {

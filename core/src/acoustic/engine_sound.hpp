@@ -52,7 +52,9 @@ public:
 
     static constexpr double kMaxSpeedChange_rpm_s = 6000.0; // crank inertia (free revving)
     static constexpr double kSpeedSmoothing_s = 0.02;
-    static constexpr double kLoadSmoothing_s = 0.03;
+    // Short: each pulse latches its amplitude at EVO, so load jumps cannot click, and the
+    // few firings between limiter cuts must reach full strength (the "brap").
+    static constexpr double kLoadSmoothing_s = 0.002;
     static constexpr double kBrightnessSmoothing_s = 0.05;
     /// Upper load limit: retarded ignition can raise the exhaust pulse above full load.
     static constexpr float kMaxLoad = 1.3F;
