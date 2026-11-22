@@ -51,6 +51,10 @@ class EngineOutputs:
     brake_torque_nm: float
     exhaust_pressure_pa: float
     exhaust_temperature_k: float
+    late_combustion_fraction: float
+    """Share of the burned fuel still burning at EVO (research.md §2.10a)."""
+    afterburn_temperature_rise_k: float
+    """Extra heat for the catalyst from fuel burning in the exhaust (research.md §2.10a)."""
 
 
 def air_density_kg_m3(pressure_pa: float, temperature_k: float) -> float:
@@ -179,6 +183,30 @@ class EngineModel:
             else 0.0
         )
 
+        # §2.10a: far behind MBT the combustion is not finished at EVO; that mixture can
+        # afterburn in the exhaust and heats the catalyst on top of the exhaust temperature.
+        afterburn = definition.afterburn
+        retard_deg = mbt_deg - point.ignition_deg
+        late_fraction = min(
+            max(
+                (retard_deg - afterburn.late_combustion_start_deg)
+                / afterburn.late_combustion_span_deg,
+                0.0,
+            ),
+            afterburn.late_combustion_max,
+        )
+        afterburn_heat_per_cycle = (
+            afterburn.afterburn_efficiency
+            * late_fraction
+            * fuel_burned
+            * LOWER_HEATING_VALUE_GASOLINE_J_KG
+        )
+        afterburn_rise = (
+            afterburn_heat_per_cycle / (exhaust_mass_per_cycle * CP_EXHAUST_J_KG_K)
+            if exhaust_mass_per_cycle > 0.0
+            else 0.0
+        )
+
         return EngineOutputs(
             volumetric_efficiency=ve,
             air_mass_per_cycle_kg=air_per_cycle,
@@ -195,4 +223,6 @@ class EngineModel:
             brake_torque_nm=brake_torque,
             exhaust_pressure_pa=exhaust_pressure,
             exhaust_temperature_k=exhaust_temperature,
+            late_combustion_fraction=late_fraction,
+            afterburn_temperature_rise_k=afterburn_rise,
         )

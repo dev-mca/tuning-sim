@@ -5,7 +5,14 @@ import io
 
 import pytest
 
-from tuning_lab.golden import COLUMNS, I6_30_NA_SWEEP, render_golden_csv
+from tuning_lab.golden import (
+    COLUMNS,
+    I6_30_NA_SWEEP,
+    OVERRUN_COLUMNS,
+    OVERRUN_FILE_NAME,
+    render_golden_csv,
+    render_overrun_csv,
+)
 from tuning_lab.paths import GOLDEN_DIR
 
 RELATIVE_TOLERANCE = 1.0e-6  # last digits may differ between platforms (libm)
@@ -27,4 +34,16 @@ def test_golden_file_is_up_to_date() -> None:
     for row, fresh in zip(rows, fresh_rows, strict=True):
         assert row == pytest.approx(fresh, rel=RELATIVE_TOLERANCE, abs=1.0e-6), (
             "golden file outdated: run `python -m tuning_lab.golden`"
+        )
+
+
+def test_overrun_golden_file_is_up_to_date() -> None:
+    committed = (GOLDEN_DIR / OVERRUN_FILE_NAME).read_text(encoding="utf-8")
+    header, rows = parse(committed)
+    fresh_header, fresh_rows = parse(render_overrun_csv())
+    assert header == list(OVERRUN_COLUMNS) == fresh_header
+    assert len(rows) == len(fresh_rows) == 120  # 6 s, one row every 50 ms
+    for row, fresh in zip(rows, fresh_rows, strict=True):
+        assert row == pytest.approx(fresh, rel=RELATIVE_TOLERANCE, abs=1.0e-6), (
+            "overrun golden file outdated: run `python -m tuning_lab.golden`"
         )
