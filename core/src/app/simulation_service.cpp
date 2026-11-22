@@ -64,6 +64,20 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                        }
                    },
                    [&](const SetTableCells& command) { applyCells(incoming, command); },
+                   [&](const GetOverrunSettings&) {
+                       reply(incoming, OverrunSettingsData{simulation_.ecu().tune().overrun});
+                   },
+                   [&](const SetOverrunSettings& command) {
+                       if (const std::string error = validateOverrunSettings(command.settings);
+                           !error.empty()) {
+                           reply(incoming, ErrorReply{error});
+                           return;
+                       }
+                       simulation_.ecu().tune().overrun = command.settings;
+                       reply(incoming, Ack{});
+                       // Everyone sees the new settings (several UIs may be connected).
+                       publisher_.send({"", "", OverrunSettingsData{command.settings}});
+                   },
                    [&](const SetAudio& command) {
                        if (sound_ != nullptr) {
                            sound_->setOutput(command.volume, command.muted);
@@ -167,6 +181,8 @@ void SimulationService::publish(const SimulationState& state) {
     snapshot.dynoMode = sweep_ ? DynoMode::Sweep : DynoMode::Free;
     snapshot.sweepProgress = sweep_ ? sweep_->progress() : 0.0;
     snapshot.fuelCut = state.command.fuelCut;
+    snapshot.overrunFueling = state.command.overrunFueling;
+    snapshot.catalystTemperature_K = state.catalystTemperature_K;
     publisher_.publishState(snapshot);
 }
 

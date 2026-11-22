@@ -128,3 +128,29 @@ TEST_CASE("hello announces whether audio is available") {
     CHECK(hello["payload"]["audio"]["available"] == true);
     CHECK(hello["payload"]["audio"]["device"] == "Speakers (PipeWire)");
 }
+
+TEST_CASE("overrun settings are decoded with enrichment in percent and encoded back") {
+    const SetOverrunSettings set = decodeAs<SetOverrunSettings>(
+        R"({"v":1,"type":"setOverrunSettings","payload":{"fuelCut":false,"retard_deg":35,"enrichment_pct":10}})");
+    CHECK_FALSE(set.settings.fuelCut);
+    CHECK(set.settings.retard_deg == 35.0);
+    CHECK(set.settings.enrichment == doctest::Approx(0.1));
+    static_cast<void>(decodeAs<GetOverrunSettings>(R"({"v":1,"type":"getOverrunSettings"})"));
+
+    const json encoded =
+        json::parse(codec().encode({"c", "9", OverrunSettingsData{{false, 35.0, 0.1}}}));
+    CHECK(encoded["type"] == "overrunSettings");
+    CHECK(encoded["id"] == "9");
+    CHECK(encoded["payload"]["fuelCut"] == false);
+    CHECK(encoded["payload"]["retard_deg"].get<double>() == doctest::Approx(35.0));
+    CHECK(encoded["payload"]["enrichment_pct"].get<double>() == doctest::Approx(10.0));
+}
+
+TEST_CASE("state carries catalyst temperature and overrun fuelling") {
+    StateSnapshot state;
+    state.catalystTemperature_K = 873.15;
+    state.overrunFueling = true;
+    const json payload = json::parse(codec().encodeState(state))["payload"];
+    CHECK(payload["catalyst_C"].get<double>() == doctest::Approx(600.0));
+    CHECK(payload["overrunFueling"] == true);
+}

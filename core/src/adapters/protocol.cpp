@@ -17,6 +17,8 @@ namespace simcore {
 
 namespace {
 
+constexpr double kPercent = 100.0; // enrichment: fraction inside, percent in the protocol
+
 using nlohmann::json;
 
 constexpr double kLitresPerCubicMetre = 1.0e3;
@@ -76,6 +78,14 @@ Command decodeCommand(const std::string& type, const json& payload,
     if (type == "setAudio") {
         return SetAudio{std::clamp(payload.at("volume").get<double>(), 0.0, 1.0),
                         payload.value("mute", false)};
+    }
+    if (type == "getOverrunSettings") {
+        return GetOverrunSettings{};
+    }
+    if (type == "setOverrunSettings") {
+        return SetOverrunSettings{{payload.at("fuelCut").get<bool>(),
+                                   payload.at("retard_deg").get<double>(),
+                                   payload.at("enrichment_pct").get<double>() / kPercent}};
     }
     if (type == "stopSweep") {
         return StopSweep{};
@@ -175,7 +185,9 @@ std::string ProtocolCodec::encodeState(const StateSnapshot& state) const {
                      {"egt_C", units::kelvinToCelsius(state.exhaustTemperature_K)},
                      {"dynoMode", dynoModeName(state.dynoMode)},
                      {"sweepProgress", state.sweepProgress},
-                     {"cutActive", state.fuelCut}});
+                     {"cutActive", state.fuelCut},
+                     {"overrunFueling", state.overrunFueling},
+                     {"catalyst_C", units::kelvinToCelsius(state.catalystTemperature_K)}});
 }
 
 std::string ProtocolCodec::encodeError(const std::string& requestId,
@@ -194,6 +206,12 @@ std::string ProtocolCodec::encode(const OutgoingMessage& message) const {
             },
             [&](const DynoResult& result) {
                 return envelope("dynoResult", message.requestId, sweepResultPayload(result));
+            },
+            [&](const OverrunSettingsData& data) {
+                return envelope("overrunSettings", message.requestId,
+                                {{"fuelCut", data.settings.fuelCut},
+                                 {"retard_deg", data.settings.retard_deg},
+                                 {"enrichment_pct", data.settings.enrichment * kPercent}});
             },
             [&](const TableData& data) {
                 const TableDescriptor* table = descriptor(data.tableId);

@@ -4,6 +4,7 @@
 // Plain C++ types in SI units: the JSON protocol lives in adapters/protocol (docs/interface.md).
 
 #include "domain/dyno/dyno.hpp"
+#include "domain/ecu/ecu.hpp"
 #include "domain/ecu/table.hpp"
 
 #include <cstddef>
@@ -40,7 +41,13 @@ struct SetAudio {
     bool muted;
 };
 
-using Command = std::variant<SetPedal, StartSweep, StopSweep, GetTable, SetTableCells, SetAudio>;
+struct GetOverrunSettings {};
+struct SetOverrunSettings {
+    OverrunSettings settings; // SI: enrichment as fraction
+};
+
+using Command = std::variant<SetPedal, StartSweep, StopSweep, GetTable, SetTableCells, SetAudio,
+                             GetOverrunSettings, SetOverrunSettings>;
 
 struct IncomingCommand {
     std::string clientId;
@@ -66,7 +73,12 @@ struct DynoResult {
     std::vector<SweepSample> samples;
 };
 
-using OutgoingPayload = std::variant<Ack, ErrorReply, TableData, DynoProgress, DynoResult>;
+struct OverrunSettingsData {
+    OverrunSettings settings;
+};
+
+using OutgoingPayload =
+    std::variant<Ack, ErrorReply, TableData, DynoProgress, DynoResult, OverrunSettingsData>;
 
 struct OutgoingMessage {
     std::string clientId; // empty = broadcast to all clients
@@ -94,6 +106,8 @@ struct StateSnapshot {
     DynoMode dynoMode = DynoMode::Free;
     double sweepProgress = 0.0;
     bool fuelCut = false;
+    bool overrunFueling = false; // fuelling in overrun with the cut switched off (pops possible)
+    double catalystTemperature_K = 0.0;
 };
 
 } // namespace simcore

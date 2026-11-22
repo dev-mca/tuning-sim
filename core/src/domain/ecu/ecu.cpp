@@ -12,6 +12,16 @@ Ecu::Ecu(Tune tune, double displacement_m3, double revLimit_rad_s, double revLim
     : tune_(std::move(tune)), displacement_m3_(displacement_m3), revLimit_rad_s_(revLimit_rad_s),
       revResume_rad_s_(revLimit_rad_s - revLimitHysteresis_rad_s), overrun_(overrunCut) {}
 
+std::string validateOverrunSettings(const OverrunSettings& settings) {
+    if (!(settings.retard_deg >= 0.0 && settings.retard_deg <= kMaxOverrunRetard_deg)) {
+        return "overrun retard must be 0..60 deg";
+    }
+    if (!(settings.enrichment >= 0.0 && settings.enrichment <= kMaxOverrunEnrichment)) {
+        return "overrun enrichment must be 0..50 %";
+    }
+    return {};
+}
+
 EcuCommand Ecu::update(double speed_rad_s, double manifoldPressure_Pa, double intakeTemperature_K,
                        double throttle) noexcept {
     updateRevLimiter(speed_rad_s);

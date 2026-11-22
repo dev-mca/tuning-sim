@@ -9,6 +9,8 @@
 #include "domain/ecu/table.hpp"
 #include "domain/engine/engine_definition.hpp"
 
+#include <string>
+
 namespace simcore {
 
 /// What the ECU does when the driver lifts off at speed (research.md §3.3).
@@ -17,6 +19,13 @@ struct OverrunSettings {
     double retard_deg = 0.0; // ignition taken back from the map while fuelling in overrun
     double enrichment = 0.0; // extra fuel while fuelling in overrun, fraction (0.1 = +10 %)
 };
+
+/// Allowed ranges of the overrun settings; outside them the ECU rejects the change.
+inline constexpr double kMaxOverrunRetard_deg = 60.0;
+inline constexpr double kMaxOverrunEnrichment = 0.5;
+
+/// Empty if the settings are valid, otherwise the reason.
+[[nodiscard]] std::string validateOverrunSettings(const OverrunSettings& settings);
 
 /// The tables and settings the user tunes. Axes and units as in EngineTables.
 struct Tune {
