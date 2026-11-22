@@ -110,6 +110,9 @@ export class FakeSimSource implements SimSource {
       case 'setTableCells':
         this.setTableCells(message.payload.id, message.payload.cells, message.id);
         return;
+      case 'setAudio':
+        this.ack(message.id); // the fake has no sound; accepting keeps the UI simple
+        return;
     }
   }
 
@@ -198,6 +201,7 @@ export class FakeSimSource implements SimSource {
           unit,
           editable,
         })),
+        audio: { available: false, device: 'the fake source has no sound' },
       },
     };
   }

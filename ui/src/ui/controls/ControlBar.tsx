@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ConnectionStatus, SourceKind } from '../../sim/SimSource.ts';
 import { useSnapshot, useStore } from '../../state/StoreContext.ts';
 import { useAnimationFrame } from '../useAnimationFrame.ts';
+import { AudioControl } from './AudioControl.tsx';
 
 const PEDAL_STEPS = 100;
 /** Key that floors the pedal while held, to blip the throttle. */
@@ -90,10 +91,15 @@ export function ControlBar({ onSourceChange }: { onSourceChange: (kind: SourceKi
         <kbd className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-ink">
           Space
         </kbd>{' '}
-        for full throttle
+        for full throttle,{' '}
+        <kbd className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-ink">
+          M
+        </kbd>{' '}
+        mutes
       </p>
       <div className="ml-auto flex items-center gap-3 font-mono text-xs text-muted">
         <span ref={clockRef} className="tabular-nums" />
+        <AudioControl />
         <SourceSwitch value={sourceKind} onChange={onSourceChange} />
         <span className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1">
           <span className={`size-2 rounded-full ${statusStyle.dot}`} aria-hidden="true" />

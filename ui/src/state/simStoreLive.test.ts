@@ -119,6 +119,19 @@ describe('SimStore with a live source', () => {
     expect(source.sentOfType('setPedal').at(-1)?.payload.value).toBe(0.3);
   });
 
+  it('sends the sound settings after hello and on change', () => {
+    const source = new ScriptedSource();
+    const store = new SimStore(source, { volume: 0.4, mute: true });
+    store.start();
+    source.status('connected');
+    source.server({ type: 'hello', payload: HELLO });
+    expect(source.sentOfType('setAudio').at(-1)?.payload).toEqual({ volume: 0.4, mute: true });
+
+    store.setAudio({ volume: 1.5, mute: false });
+    expect(store.getSnapshot().audio).toEqual({ volume: 1, mute: false });
+    expect(source.sentOfType('setAudio').at(-1)?.payload).toEqual({ volume: 1, mute: false });
+  });
+
   it('forgets the engine state and the sweep when the connection drops', () => {
     const { store, source } = connectedStore();
     source.server({
