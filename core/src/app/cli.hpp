@@ -6,7 +6,10 @@
 //   simcore --sound-sweep out.wav [--ignition-offset -10]       engine sound of a sweep as WAV
 //   simcore --sound-blips out.wav [--no-overrun-cut] [--overrun-retard 35]
 //                                 [--overrun-enrichment 0.1]     throttle blips with overrun
+//   simcore --sound-launch out.wav [--launch-rpm 4000] [--launch-retard 10]   2-step
 // Options: --engine <id>, --shared <dir>, --port <n>, --no-audio, --version, --help.
+
+#include "domain/ecu/ecu.hpp"
 
 #include <optional>
 #include <string>
@@ -14,11 +17,14 @@
 
 namespace simcore {
 
-enum class CliMode { Serve, Sweep, SoundSweep, SoundBlips, Version, Help };
+enum class CliMode { Serve, Sweep, SoundSweep, SoundBlips, SoundLaunch, Version, Help };
 
 /// Range of --sound-sweep: the full speed range of the reference engine.
 inline constexpr double kSoundSweepFrom_rpm = 1000.0;
 inline constexpr double kSoundSweepTo_rpm = 7000.0;
+
+/// Retard of --sound-launch unless --launch-retard is given: a typical 2-step map.
+inline constexpr double kDefaultSoundLaunchRetard_deg = 10.0;
 
 struct CliOptions {
     CliMode mode = CliMode::Serve;
@@ -35,6 +41,9 @@ struct CliOptions {
     bool overrunFuelCut = true;
     double overrunRetard_deg = 0.0;
     double overrunEnrichment = 0.0;
+    std::string soundLaunchFile; // target of --sound-launch
+    double launch_rpm = kDefaultLaunch_rpm;
+    double launchRetard_deg = kDefaultSoundLaunchRetard_deg;
 };
 
 struct CliParseResult {

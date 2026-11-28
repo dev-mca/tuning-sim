@@ -71,6 +71,13 @@ CliParseResult parseCommandLine(const std::vector<std::string>& arguments) {
             } else if (option == "--sound-blips") {
                 options.mode = CliMode::SoundBlips;
                 options.soundBlipsFile = reader.value(option);
+            } else if (option == "--sound-launch") {
+                options.mode = CliMode::SoundLaunch;
+                options.soundLaunchFile = reader.value(option);
+            } else if (option == "--launch-rpm") {
+                options.launch_rpm = parseNumber(reader.value(option), option);
+            } else if (option == "--launch-retard") {
+                options.launchRetard_deg = parseNumber(reader.value(option), option);
             } else if (option == "--no-overrun-cut") {
                 options.overrunFuelCut = false;
             } else if (option == "--overrun-retard") {
@@ -103,6 +110,8 @@ std::string usageText() {
            "  simcore --sound-blips <file.wav> [--no-overrun-cut] [--overrun-retard <deg>]\n"
            "                        [--overrun-enrichment <fraction>]\n"
            "                                             throttle blips: limiter and overrun\n"
+           "  simcore --sound-launch <file.wav> [--launch-rpm <rpm>] [--launch-retard <deg>]\n"
+           "                                             2-step held at full throttle, released\n"
            "  simcore --version | --help\n"
            "options:\n"
            "  --shared <dir>   folder with engines/ and tables/ (default: repository shared/)\n"

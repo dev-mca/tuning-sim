@@ -64,6 +64,21 @@ TEST_CASE("sound blips with overrun settings are parsed") {
     CHECK(result.options->overrunEnrichment == 0.1);
 }
 
+TEST_CASE("--sound-launch renders a 2-step with optional launch speed and retard") {
+    const CliParseResult defaults = parseCommandLine({"--sound-launch", "launch.wav"});
+    REQUIRE(defaults.options.has_value());
+    CHECK(defaults.options->mode == CliMode::SoundLaunch);
+    CHECK(defaults.options->soundLaunchFile == "launch.wav");
+    CHECK(defaults.options->launch_rpm == kDefaultLaunch_rpm);
+    CHECK(defaults.options->launchRetard_deg == kDefaultSoundLaunchRetard_deg);
+
+    const CliParseResult custom = parseCommandLine(
+        {"--sound-launch", "launch.wav", "--launch-rpm", "4500", "--launch-retard", "15"});
+    REQUIRE(custom.options.has_value());
+    CHECK(custom.options->launch_rpm == 4500.0);
+    CHECK(custom.options->launchRetard_deg == 15.0);
+}
+
 TEST_CASE("invalid command lines are rejected with a message") {
     for (const auto& arguments :
          std::vector<std::vector<std::string>>{{"--sweep", "1000"},

@@ -222,3 +222,19 @@ TEST_CASE("switching the fuel cut off alone gives a soft burble without bangs") 
     CHECK(loudWindows(overrun, 0.15F) == 0);
     CHECK(rms(overrun) > 1.5 * rms(section(stock, 8.1, 9.5)));
 }
+
+TEST_CASE("a 2-step bangs at the launch speed, the stock limiter does not") {
+    const EngineDefinition& definition = test::referenceEngine().definition;
+    const std::vector<float> stock = left(renderLaunchSound(definition, LaunchSettings{}));
+    const std::vector<float> twoStep =
+        left(renderLaunchSound(definition, {true, units::rpmToRadS(4000.0), 10.0}));
+    constexpr float kBangThreshold = 0.25F; // well above the stock rev limiter (about 0.17)
+    // Late in the hold phase the catalyst is hot from the 2-step's own afterburn.
+    const std::vector<float> stockHold = section(stock, 3.5, 6.0);
+    const std::vector<float> twoStepHold = section(twoStep, 3.5, 6.0);
+    CHECK(loudWindows(stockHold, kBangThreshold) == 0);
+    CHECK(loudWindows(twoStepHold, kBangThreshold) >= 5);
+    const auto [low, high] = std::minmax_element(twoStep.begin(), twoStep.end());
+    CHECK(*low >= -1.0F);
+    CHECK(*high <= 1.0F);
+}

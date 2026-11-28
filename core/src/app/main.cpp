@@ -15,6 +15,7 @@
 #include "app/simulation_service.hpp"
 #include "app/sound_renderer.hpp"
 #include "app/sound_sweep.hpp"
+#include "domain/common/units.hpp"
 #include "domain/dyno/dyno.hpp"
 #include "simcore/version.hpp"
 
@@ -82,6 +83,23 @@ int runSoundBlips(const CliOptions& options, const LoadedEngine& engine) {
         return 1;
     }
     std::cout << "wrote " << options.soundBlipsFile << " ("
+              << static_cast<double>(samples.size() / kStereo) / kSampleRate << " s)\n";
+    return 0;
+}
+
+int runSoundLaunch(const CliOptions& options, const LoadedEngine& engine) {
+    const LaunchSettings launch{true, units::rpmToRadS(options.launch_rpm),
+                                options.launchRetard_deg};
+    if (const std::string error = validateLaunchSettings(launch); !error.empty()) {
+        std::cerr << "error: " << error << '\n';
+        return 2;
+    }
+    const std::vector<float> samples = renderLaunchSound(engine.definition, launch, kSampleRate);
+    if (!writeWav16(options.soundLaunchFile, samples, kStereo, kSampleRate)) {
+        std::cerr << "error: cannot write " << options.soundLaunchFile << '\n';
+        return 1;
+    }
+    std::cout << "wrote " << options.soundLaunchFile << " ("
               << static_cast<double>(samples.size() / kStereo) / kSampleRate << " s)\n";
     return 0;
 }
@@ -154,6 +172,8 @@ int main(int argc, char** argv) {
             return runSoundSweep(options, engine);
         case CliMode::SoundBlips:
             return runSoundBlips(options, engine);
+        case CliMode::SoundLaunch:
+            return runSoundLaunch(options, engine);
         default:
             return serve(options, engine);
         }
