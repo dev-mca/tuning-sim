@@ -233,7 +233,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 6 | UI ↔ simcore live | P2 | Integration | ✅ |
 | 7 | Sound an simcore koppeln | P1 | Echtzeit-Threads | ✅ |
 | 7b | Pops & Bangs im Schub (vorgezogen aus 10) | P1 | – | ✅ |
-| 7c | 2-Step im Stand (vorgezogen aus 10) | P1 | – | ⬜ |
+| 7c | 2-Step im Stand (vorgezogen aus 10) | P1 | – | ✅ |
 | 8 | Turbo + Klopfen + Turbo-Sound | P2 | Regelungstechnik | ⬜ |
 | 9 | Kompressor/Supercharger | P2 | – | ⬜ |
 | 10 | Antriebsstrang, Rollenprüfstand, Launch/Flat Shift/Pops | P3 | – | ⬜ |
@@ -321,6 +321,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Launch Control ohne Getriebe: zweiter, tiefer Drehzahlbegrenzer (z. B. 4000/min) bei Vollgas im Stand, mit Spätzündung und Zündunterbrechung (Technik aus 7b), Einstellungen im Tune.
 - Zuerst Lab, Golden File, dann C++; Schalter und Einstellungen in der UI.
 **Abnahme:** Vollgas mit aktivem 2-Step hält die Drehzahl am Launch-Limit und knallt hörbar; aus → normaler Begrenzer.
+**Umgesetzt (2026-11-28):** ADR 0014. Zündunterbrechung mit weiter eingespritztem Kraftstoff im MVM (research.md §3.4), Launch-Einstellungen im Tune (ein/aus, Launch-Drehzahl, Spätzündung) und Launch-Taste als Live-Eingang. Neues Golden File `i6_30_na_launch.csv` (C++ bitgenau, die anderen Golden Files unverändert). Protokoll: `getLaunchSettings`/`setLaunchSettings`/`setLaunchSwitch`, `state.launchSwitch`/`launchActive`/`sparkCut`. UI-Panel «Launch control · 2-step», Taste L. Gemessen: Drehzahl bleibt bei 3900–4000/min, ~26 Wechsel pro Sekunde, Kat 430 → 635 °C in 3,5 s; `simcore --sound-launch out.wav` knallt mit Spitzen bis 0,41 (Serien-Begrenzer 0,17). 139 Lab-, 138 C++-, 221 UI-Tests, 4 End-to-End-Tests.
 
 ### Iteration 8 – Turbo, Klopfen, Turbo-Sound
 - Verdichter-/Turbinenmodell, Wellendynamik, Wastegate (Open Loop + PID auf `boostTarget`), Ladeluftkühler, Abgasgegendruck.

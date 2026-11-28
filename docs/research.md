@@ -238,6 +238,7 @@ In echten ECUs (Speeduino) sind VE und Zündung typischerweise 16 × 16 Tabellen
 
 ### 3.4 Tuning-Funktionen (ab Iteration 10)
 - **Launch Control:** im Stand Drehzahlbegrenzer auf N_launch (z. B. 4000/min) mit Zündverstellung nach spät; mit Turbo baut sich so Ladedruck auf.
+  - **Modell in tuning-sim (Iteration 7c, «2-Step»):** aktiv, wenn eingeschaltet, Launch-Taste gedrückt (später: Kupplung getreten im Stand) und Gas offen. Die ECU zieht die Zündung um θ_launch zurück und hält N_launch mit **Zündunterbrechung** und der Hysterese des Drehzahlbegrenzers; eingespritzt wird weiter. Im MVM heisst ein Schritt mit Zündunterbrechung: im Zylinder verbrennt nichts (T_i = 0, keine Abgaswärme aus Verbrennung), das zündfähige Gemisch m_ab = min(m_fuel, m_air/AFR_st) geht unverbrannt in den Auspuff und wird wie in §2.10a mit η_ab dem Kat zugerechnet (f_late = 1). Das schnelle Wechseln zwischen Zünden und Unterbrechen (≈ 25 Mal pro Sekunde beim Referenzmotor) ist das typische Stottern; die Knaller kommen aus der Nachverbrennung und brauchen einen heissen Kat.
 - **Flat Shift:** Kupplung getreten bei Vollgas → kurze Zündunterbrechung statt Gaswegnehmen.
 - **Pops & Bangs (Overrun):** im Schub statt Schubabschaltung etwas Kraftstoff mit sehr später Zündung → Nachverbrennung im heissen Auspuff → Knallen. Im Modell: Ereignisse mit hoher Abgasenthalpie und zufälligen Zündaussetzern.
 

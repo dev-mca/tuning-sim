@@ -82,6 +82,7 @@ cmake --build --preset debug    # bauen
 ./build/debug/core/simcore      # Server ws://127.0.0.1:47800 mit Ton (Ctrl+C beendet); --no-audio ohne Ton
 ./build/release/core/simcore --sound-sweep out.wav [--ignition-offset -10]   # Sweep-Sound als WAV
 ./build/release/core/simcore --sound-blips out.wav --no-overrun-cut --overrun-retard 35 --overrun-enrichment 0.1   # Pops
+./build/release/core/simcore --sound-launch out.wav [--launch-rpm 4000] [--launch-retard 10]   # 2-Step
 ./build/debug/core/simcore --sweep 1000 7000   # Dyno-Sweep als CSV (Format wie Golden File)
 ctest --preset debug            # Tests (doctest, ADR 0002)
 find core -name '*.[ch]pp' | xargs clang-format -i   # formatieren
@@ -117,10 +118,11 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 ## Aktueller Stand
 
 - Letzte Arbeit: **Welle 1 (2026-11-28)** mit 5 parallelen Agents gemerged: Origin-Check + Achsen-Rundung (core), 0D-Prototyp (lab, Iteration 11 🟨), Tauri-Hülle `app/` (12 🟨), 3D-Kennfeld + .msq-Import (13 🟨). Details plan.md §8.
-- Nächste Iteration: **7c – 2-Step im Stand**, danach 10 Antriebsstrang, dann 8 Turbo (vom Nutzer freigegeben). Vorschlag zur Entkopplung des Protokolls: plan.md §11.
+- Iteration **7c – 2-Step im Stand ✅** (2026-11-28, ADR 0014).
+- Nächste Iteration: **Vorbereitung Protokoll-Vertragstest + Stub-Felder** (plan.md §11, Variante A, vom Nutzer dem Lead überlassen), danach 10 Antriebsstrang, dann 8 Turbo.
 - System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
-- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket, 0005 UI-Zustand/Rendering, 0006 Live-Verbindung/Tune-Dateien, 0007 Sound in simcore, 0008 Pops & Bangs, 0009 Tauri-Hülle, 0010 0D-Modell (Lab), 0011 Origin-Check, 0012 .msq-Import, 0013 3D-Kennfeld
+- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket, 0005 UI-Zustand/Rendering, 0006 Live-Verbindung/Tune-Dateien, 0007 Sound in simcore, 0008 Pops & Bangs, 0009 Tauri-Hülle, 0010 0D-Modell (Lab), 0011 Origin-Check, 0012 .msq-Import, 0013 3D-Kennfeld, 0014 2-Step
 - simcore (`core/src/`): `domain/` (Table1D/2D, Saugrohr, MVM inkl. Nachverbrennung, ECU mit Begrenzer + Schubabschaltung + Schub-Einstellungen, Kat-Temperatur, Dyno/SweepRun; bitgenau wie lab, Golden Files Sweep + Overrun), `acoustic/` + `dsp/` (Bibliothek `simcore_acoustic`: Pulse, Wellenleiter, Nachverbrennungs-Knaller, `AcousticParams` → `SoundTarget`), `ports/` (Interfaces inkl. `IAcousticSink`), `adapters/` (JSON-Repository, Protokoll-Codec, MessageBus, WebSocket-Server, CSV, WAV, miniaudio `AudioOutput`), `app/` (SimulationService, RealtimeRunner, `SoundRenderer`, `engine_acoustics`, `sound_sweep`, CLI, main), `concurrency/` (SPSC-Queue, Triple Buffer). Protokoll v1: `docs/interface.md`.
 - UI-Cockpit (`ui/src/`, Übersicht in `ui/README.md`): Port `sim/SimSource.ts`, `sim/fake/FakeSimSource` (Protokoll v1, Daten aus `shared/`), `state/simStore.ts`, Gauges (SVG), Tabelleneditor (Canvas), Dyno (uPlot). `App.tsx` wählt die Quelle (Live = `sim/live/WebSocketSimSource`, Fake), Tunes als JSON in der UI (`domain/tuneFile.ts`).
 - Lab (Referenz für den C++-Port in Iteration 4): MVM, ECU, Dyno in `lab/src/tuning_lab/` (Übersicht in `lab/README.md`); Referenzmotor `shared/engines/i6_30_na.json`, Tabellen `shared/tables/i6_30_na/`, Golden File `shared/golden/i6_30_na_sweep.csv`. Ergebnis Serie: 304 Nm, 196 kW, bmep 12,8 bar, Leerlauf 765/min bei 30 kPa.
