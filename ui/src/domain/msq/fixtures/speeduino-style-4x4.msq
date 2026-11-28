@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Synthetic test fixture written by hand for tuning-sim (not exported from a real ECU). -->
+<msq xmlns="http://www.msefi.com/:msq">
+  <bibliography author="tuning-sim test" tuneComment="synthetic 4x4 tune" writeDate="2026-11-28"/>
+  <versionInfo fileFormat="5.0" nPages="3" signature="synthetic-speeduino-style"/>
+  <page number="0">
+    <constant name="nCylinders">"6"</constant>
+    <constant name="stoich" units="AFR" digits="1">14.7</constant>
+    <constant name="veTable" cols="4" rows="4" units="%" digits="0">
+      40.0 50.0 60.0 55.0
+      55.0 65.0 75.0 70.0
+      70.0 85.0 95.0 90.0
+      80.0 95.0 105.0 100.0
+    </constant>
+    <constant name="rpmBins" cols="1" rows="4" units="RPM">
+      1000.0
+      3000.0
+      5000.0
+      7000.0
+    </constant>
+    <constant name="fuelLoadBins" cols="1" rows="4" units="kPa">
+      30.0
+      50.0
+      80.0
+      100.0
+    </constant>
+  </page>
+  <page number="1">
+    <constant name="advTable1" cols="4" rows="4" units="deg">
+      30.0 38.0 42.0 44.0
+      24.0 32.0 36.0 38.0
+      14.0 22.0 28.0 30.0
+      10.0 18.0 24.0 26.0
+    </constant>
+    <constant name="rpmBins2" cols="1" rows="4" units="RPM">1000 3000 5000 7000</constant>
+    <constant name="mapBins1" cols="1" rows="4" units="kPa">30 50 80 100</constant>
+    <constant name="sparkMode" units="bits">"Wasted Spark"</constant>
+  </page>
+  <page number="2">
+    <constant name="afrTable" cols="4" rows="4" units="AFR">
+      14.7 14.7 14.7 14.7
+      14.7 14.7 14.7 14.7
+      14.0 13.5 13.2 13.2
+      13.2 12.9 12.5 12.5
+    </constant>
+    <constant name="rpmBinsAFR" cols="1" rows="4" units="RPM">1000 3000 5000 7000</constant>
+    <constant name="loadBinsAFR" cols="1" rows="4" units="kPa">30 50 80 100</constant>
+  </page>
+</msq>

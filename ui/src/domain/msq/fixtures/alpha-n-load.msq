@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic test fixture written by hand for tuning-sim: VE over throttle position (alpha-N). -->
+<msq xmlns="http://www.msefi.com/:msq">
+  <page number="0">
+    <constant name="veTable" cols="2" rows="2" units="%">
+      40 60
+      80 100
+    </constant>
+    <constant name="rpmBins" cols="1" rows="2" units="RPM">1000 7000</constant>
+    <constant name="fuelLoadBins" cols="1" rows="2" units="TPS">0 100</constant>
+  </page>
+</msq>
