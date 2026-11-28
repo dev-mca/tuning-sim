@@ -2,10 +2,29 @@
 
 #include "domain/common/units.hpp"
 
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
 namespace simcore::table_units {
+
+namespace {
+
+constexpr double powerOfTen(int exponent) {
+    double result = 1.0;
+    for (int i = 0; i < exponent; ++i) {
+        result *= 10.0;
+    }
+    return result;
+}
+
+constexpr double kAxisScale = powerOfTen(kAxisDecimals);
+
+double roundToAxisDecimals(double value) {
+    return std::round(value * kAxisScale) / kAxisScale;
+}
+
+} // namespace
 
 double toSi(std::string_view unit, double value) {
     if (unit == "1/min") {
@@ -25,10 +44,10 @@ double toSi(std::string_view unit, double value) {
 
 double fromSi(std::string_view unit, double value) {
     if (unit == "1/min") {
-        return units::radSToRpm(value);
+        return roundToAxisDecimals(units::radSToRpm(value));
     }
     if (unit == "kPa") {
-        return units::paToKpa(value);
+        return roundToAxisDecimals(units::paToKpa(value));
     }
     if (unit == "%") {
         return value * units::kPercent;

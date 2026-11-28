@@ -14,9 +14,11 @@
 #include <nlohmann/json.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -31,13 +33,19 @@ constexpr auto kTimeout = std::chrono::seconds(5);
 
 class TestClient {
 public:
-    explicit TestClient(int port) {
+    /// Without `origin`, IXWebSocket sends its own URL (ws://127.0.0.1:port) as Origin.
+    explicit TestClient(int port, const std::optional<std::string>& origin = std::nullopt) {
         socket_.setUrl("ws://127.0.0.1:" + std::to_string(port));
+        if (origin) {
+            socket_.setExtraHeaders({{"Origin", *origin}});
+        }
         socket_.disableAutomaticReconnection();
         socket_.setOnMessageCallback([this](const ix::WebSocketMessagePtr& message) {
+            const std::lock_guard<std::mutex> lock(mutex_);
             if (message->type == ix::WebSocketMessageType::Message) {
-                const std::lock_guard<std::mutex> lock(mutex_);
                 messages_.push_back(json::parse(message->str));
+            } else if (message->type == ix::WebSocketMessageType::Close) {
+                closeCode_ = message->closeInfo.code;
             }
         });
         socket_.start();
@@ -72,10 +80,31 @@ public:
         return n;
     }
 
+    /// Waits until the server closes the connection; returns its close code.
+    std::optional<std::uint16_t> waitForClose() {
+        const auto deadline = std::chrono::steady_clock::now() + kTimeout;
+        while (std::chrono::steady_clock::now() < deadline) {
+            {
+                const std::lock_guard<std::mutex> lock(mutex_);
+                if (closeCode_) {
+                    return closeCode_;
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        return std::nullopt;
+    }
+
+    std::size_t messageCount() {
+        const std::lock_guard<std::mutex> lock(mutex_);
+        return messages_.size();
+    }
+
 private:
     ix::WebSocket socket_;
     std::mutex mutex_;
     std::vector<json> messages_;
+    std::optional<std::uint16_t> closeCode_;
 };
 
 bool hasType(const json& message, const char* type) {
@@ -129,6 +158,9 @@ TEST_CASE("client receives hello and state, commands change the simulation") {
         REQUIRE_FALSE(table.is_null());
         CHECK(table["id"] == "t1");
         CHECK(table["payload"]["values"].size() == 16);
+        // Axis bins come back as written in the table file, without rad/s float noise.
+        CHECK(table["payload"]["xAxis"]["bins"][2].dump() == "1400.0");
+        CHECK(table["payload"]["xAxis"]["bins"][6].dump() == "3000.0");
 
         // setTableCells is applied.
         client.send(
@@ -150,4 +182,27 @@ TEST_CASE("client receives hello and state, commands change the simulation") {
     server.stop();
     runner.stop();
     CHECK(service.simulation().ecu().tune().ignition.cell(0, 0) == 9.5);
+}
+
+TEST_CASE("foreign web page origins are refused, the UI origin connects") {
+    constexpr std::uint16_t kPolicyViolation = 1008; // RFC 6455 §7.4.1
+    const LoadedEngine& engine = test::referenceEngine();
+    auto bus = std::make_unique<MessageBus>();
+    const ProtocolCodec codec(engine);
+    WebSocketServer server(*bus, codec, kTestPort);
+    REQUIRE(server.start().empty());
+
+    {
+        TestClient foreign(kTestPort, "https://evil.example");
+        CHECK(foreign.waitForClose() == kPolicyViolation);
+        CHECK(foreign.messageCount() == 0); // no hello, no state
+        CHECK(server.clientCount() == 0);
+    }
+    {
+        TestClient ui(kTestPort, "http://localhost:5173");
+        CHECK_FALSE(ui.waitFor([](const json& m) { return hasType(m, "hello"); }).is_null());
+        CHECK(server.clientCount() == 1);
+    }
+
+    server.stop();
 }
