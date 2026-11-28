@@ -2,6 +2,8 @@
   "v": 1,
   "type": "dynoResult",
   "payload": {
+    "kind": "engine",
+    "gear": null,
     "rpm": [
       1000.0,
       1100.0

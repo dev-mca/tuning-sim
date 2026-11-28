@@ -6,6 +6,7 @@
 
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <deque>
 #include <variant>
 #include <vector>
@@ -253,4 +254,59 @@ TEST_CASE("holding the launch switch at full pedal holds the launch speed") {
     CHECK_FALSE(bus.lastState.launchSwitch);
     CHECK_FALSE(bus.lastState.launchActive);
     CHECK(units::radSToRpm(bus.lastState.speed_rad_s) > 6000.0);
+}
+
+TEST_CASE("shift and clutch commands drive the car on the roller dyno") {
+    FakeBus bus;
+    SimulationService service(test::referenceEngine(), bus, bus);
+    bus.push(Shift{9}, "bad");
+    runSteps(service, 1);
+    CHECK(bus.count<ErrorReply>() == 1);
+
+    bus.push(SetClutch{true}, "clutch");
+    bus.push(Shift{1}, "first");
+    runSteps(service, 300);
+    CHECK(bus.lastState.gear == 1);
+    CHECK(bus.lastState.clutchEngagement == 0.0);
+    bus.push(SetPedal{0.6}, "pedal");
+    bus.push(SetClutch{false}, "go");
+    runSteps(service, 3000);
+    CHECK(bus.lastState.clutchLocked);
+    REQUIRE(bus.lastState.vehicleSpeed_m_s.has_value());
+    CHECK(units::msToKmh(*bus.lastState.vehicleSpeed_m_s) > 20.0);
+    REQUIRE(bus.lastState.wheelTorque_Nm.has_value());
+    CHECK(*bus.lastState.wheelTorque_Nm > 0.0);
+}
+
+TEST_CASE("a roller run reports progress and a roller result, and refuses shifting") {
+    FakeBus bus;
+    SimulationService service(test::referenceEngine(), bus, bus);
+    bus.push(StartRollerRun{{3, 3000.0, 3600.0}}, "roll");
+    runSteps(service, 1);
+    CHECK(bus.count<Ack>() == 1);
+    CHECK(bus.lastState.dynoMode == DynoMode::Roller);
+    bus.push(Shift{4}, "shift");
+    runSteps(service, 1);
+    CHECK(bus.count<ErrorReply>() == 1);
+    runSteps(service, 5000);
+    REQUIRE(bus.count<RollerResult>() == 1);
+    CHECK(bus.count<DynoProgress>() >= 1);
+    CHECK(bus.lastState.dynoMode == DynoMode::Free);
+    const auto& result =
+        std::get<RollerResult>(std::find_if(bus.sent.begin(), bus.sent.end(), [](const auto& m) {
+                                   return std::holds_alternative<RollerResult>(m.payload);
+                               })->payload);
+    CHECK(result.gear == 3);
+    CHECK(result.samples.size() == 7); // 3000..3600 per 100 1/min
+}
+
+TEST_CASE("an engine dyno sweep takes the car out of gear") {
+    FakeBus bus;
+    SimulationService service(test::referenceEngine(), bus, bus);
+    bus.push(Shift{1}, "first");
+    runSteps(service, 500);
+    CHECK(service.car().drivetrain().gear() == 1);
+    bus.push(StartSweep{{2000.0, 2500.0, 1000.0, 1.0, 100.0}}, "sweep");
+    runSteps(service, 1);
+    CHECK(service.car().drivetrain().gear() == 0);
 }

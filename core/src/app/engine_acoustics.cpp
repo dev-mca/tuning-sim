@@ -63,7 +63,8 @@ acoustic::AcousticParams acousticParams(const SimulationState& state,
     params.fuelCut = state.command.fuelCut || state.command.sparkCut;
     // Pops need fuel in overrun or a spark-cutting 2-step, late or no combustion in the
     // cylinder and a hot exhaust (research.md §2.10a, §3.4, §6.7).
-    params.afterburnRate = (state.command.overrunFueling || state.command.launchActive)
+    params.afterburnRate = (state.command.overrunFueling || state.command.launchActive ||
+                            state.command.flatShiftActive)
                                ? kAfterburnEventShare * state.engine.lateCombustionFraction *
                                      catalystHotness(state.catalystTemperature_K)
                                : 0.0;

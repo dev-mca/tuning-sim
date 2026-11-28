@@ -40,6 +40,14 @@ bool Drivetrain::shift(int gear) noexcept {
     return true;
 }
 
+void Drivetrain::setNeutral() noexcept {
+    gear_ = kNeutral;
+    targetGear_ = kNeutral;
+    shiftPhase_ = ShiftPhase::None;
+    clutchState_ = ClutchState::Open;
+    clutchTorque_Nm_ = 0.0;
+}
+
 void Drivetrain::placeInGear(int gear, double engineSpeed_rad_s) {
     gear_ = gear;
     targetGear_ = gear;

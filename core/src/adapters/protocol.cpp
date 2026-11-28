@@ -56,11 +56,20 @@ std::string envelope(const char* type, const std::string& requestId, json payloa
 }
 
 const char* dynoModeName(DynoMode mode) {
-    return mode == DynoMode::Sweep ? "sweep" : "free";
+    switch (mode) {
+    case DynoMode::Sweep:
+        return "sweep";
+    case DynoMode::Roller:
+        return "roller";
+    case DynoMode::Free:
+        break;
+    }
+    return "free";
 }
 
 json sweepResultPayload(const DynoResult& result) {
-    json payload = {{"rpm", json::array()},      {"torque_Nm", json::array()},
+    json payload = {{"kind", "engine"},          {"gear", nullptr},
+                    {"rpm", json::array()},      {"torque_Nm", json::array()},
                     {"power_kW", json::array()}, {"lambda", json::array()},
                     {"map_kPa", json::array()},  {"ignition_deg", json::array()},
                     {"egt_C", json::array()},    {"airflow_kg_s", json::array()}};
@@ -68,6 +77,26 @@ json sweepResultPayload(const DynoResult& result) {
         payload["rpm"].push_back(units::radSToRpm(sample.speed_rad_s));
         payload["torque_Nm"].push_back(sample.measuredTorque_Nm);
         payload["power_kW"].push_back(units::wToKw(sample.power_W()));
+        payload["lambda"].push_back(number(sample.lambdaActual));
+        payload["map_kPa"].push_back(units::paToKpa(sample.manifoldPressure_Pa));
+        payload["ignition_deg"].push_back(sample.ignition_deg);
+        payload["egt_C"].push_back(units::kelvinToCelsius(sample.exhaustTemperature_K));
+        payload["airflow_kg_s"].push_back(sample.airMassFlow_kg_s);
+    }
+    return payload;
+}
+
+/// Roller run: power at the wheels; torque as engine-equivalent torque = wheel torque / i.
+json rollerResultPayload(const RollerResult& result) {
+    json payload = {{"kind", "roller"},          {"gear", result.gear},
+                    {"rpm", json::array()},      {"torque_Nm", json::array()},
+                    {"power_kW", json::array()}, {"lambda", json::array()},
+                    {"map_kPa", json::array()},  {"ignition_deg", json::array()},
+                    {"egt_C", json::array()},    {"airflow_kg_s", json::array()}};
+    for (const RollerSample& sample : result.samples) {
+        payload["rpm"].push_back(units::radSToRpm(sample.speed_rad_s));
+        payload["torque_Nm"].push_back(sample.wheelTorque_Nm / result.overallRatio);
+        payload["power_kW"].push_back(units::wToKw(sample.wheelPower_W()));
         payload["lambda"].push_back(number(sample.lambdaActual));
         payload["map_kPa"].push_back(units::paToKpa(sample.manifoldPressure_Pa));
         payload["ignition_deg"].push_back(sample.ignition_deg);
@@ -107,10 +136,24 @@ Command decodeCommand(const std::string& type, const json& payload,
     if (type == "setLaunchSettings") {
         return SetLaunchSettings{{payload.at("enabled").get<bool>(),
                                   units::rpmToRadS(payload.at("launch_rpm").get<double>()),
-                                  payload.at("retard_deg").get<double>()}};
+                                  payload.at("retard_deg").get<double>(),
+                                  payload.value("flatShift", false)}};
     }
     if (type == "setLaunchSwitch") {
         return SetLaunchSwitch{payload.at("held").get<bool>()};
+    }
+    if (type == "shift") {
+        return Shift{payload.at("gear").get<int>()};
+    }
+    if (type == "setClutch") {
+        return SetClutch{payload.at("pressed").get<bool>()};
+    }
+    if (type == "startRollerRun") {
+        RollerParameters parameters;
+        parameters.gear = payload.at("gear").get<int>();
+        parameters.speedFrom_rpm = payload.value("rpmFrom", parameters.speedFrom_rpm);
+        parameters.speedTo_rpm = payload.value("rpmTo", parameters.speedTo_rpm);
+        return StartRollerRun{parameters};
     }
     if (type == "stopSweep") {
         return StopSweep{};
@@ -224,7 +267,9 @@ std::string ProtocolCodec::encodeState(const StateSnapshot& state) const {
                      {"gear", state.gear.has_value() ? json(*state.gear) : json(nullptr)},
                      {"clutch", optionalNumber(state.clutchEngagement, unchanged)},
                      {"vehicleSpeed_kmh", optionalNumber(state.vehicleSpeed_m_s, units::msToKmh)},
-                     {"wheelTorque_Nm", optionalNumber(state.wheelTorque_Nm, unchanged)}});
+                     {"wheelTorque_Nm", optionalNumber(state.wheelTorque_Nm, unchanged)},
+                     {"clutchLocked", state.clutchLocked},
+                     {"shifting", state.shifting}});
 }
 
 std::string ProtocolCodec::encodeError(const std::string& requestId,
@@ -254,7 +299,11 @@ std::string ProtocolCodec::encode(const OutgoingMessage& message) const {
                 return envelope("launchSettings", message.requestId,
                                 {{"enabled", data.settings.enabled},
                                  {"launch_rpm", units::radSToRpm(data.settings.launchSpeed_rad_s)},
-                                 {"retard_deg", data.settings.retard_deg}});
+                                 {"retard_deg", data.settings.retard_deg},
+                                 {"flatShift", data.settings.flatShift}});
+            },
+            [&](const RollerResult& result) {
+                return envelope("dynoResult", message.requestId, rollerResultPayload(result));
             },
             [&](const TableData& data) {
                 const TableDescriptor* table = descriptor(data.tableId);

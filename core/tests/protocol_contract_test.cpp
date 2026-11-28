@@ -103,6 +103,10 @@ std::map<std::string, std::string> encodedServerMessages() {
     const EngineDefinition& engine = test::referenceEngine().definition;
     StateSnapshot state;
     state.lambdaActual = 1.0;
+    state.gear = 0; // the car is always there since iteration 10 (roller dyno)
+    state.clutchEngagement = 1.0;
+    state.vehicleSpeed_m_s = 0.0;
+    state.wheelTorque_Nm = 0.0;
     SweepSample sample{};
     sample.lambdaActual = 0.88;
     return {
@@ -163,4 +167,15 @@ TEST_CASE("every message simcore sends has the shape of its contract example") {
         const std::optional<std::string> mismatch = shapeMismatch(expected, actual, type);
         CHECK_MESSAGE(!mismatch.has_value(), mismatch.value_or(""));
     }
+}
+
+TEST_CASE("a roller run result has the shape of the dynoResult example") {
+    const json expected = json::parse(examples("server").at("dynoResult"));
+    RollerSample sample{};
+    sample.lambdaActual = 0.88;
+    const json actual = json::parse(codec().encode({"", "", RollerResult{4, 12.0, {sample}}}));
+    CHECK(actual["payload"]["kind"] == "roller");
+    CHECK(actual["payload"]["gear"] == 4);
+    const std::optional<std::string> mismatch = shapeMismatch(expected, actual, "dynoResult");
+    CHECK_MESSAGE(!mismatch.has_value(), mismatch.value_or(""));
 }

@@ -4,6 +4,7 @@
 // Plain C++ types in SI units: the JSON protocol lives in adapters/protocol (docs/interface.md).
 
 #include "domain/dyno/dyno.hpp"
+#include "domain/dyno/roller.hpp"
 #include "domain/ecu/ecu.hpp"
 #include "domain/ecu/table.hpp"
 
@@ -56,9 +57,22 @@ struct SetLaunchSwitch {
     bool held;
 };
 
+/// Sequential shift to `gear` (0 = neutral) with the automatic clutch (research.md §8.3).
+struct Shift {
+    int gear;
+};
+/// The clutch pedal (true = pressed = clutch open).
+struct SetClutch {
+    bool pressed;
+};
+/// Roller dyno run in one gear (research.md §8.4); stopSweep ends it early.
+struct StartRollerRun {
+    RollerParameters parameters;
+};
+
 using Command = std::variant<SetPedal, StartSweep, StopSweep, GetTable, SetTableCells, SetAudio,
                              GetOverrunSettings, SetOverrunSettings, GetLaunchSettings,
-                             SetLaunchSettings, SetLaunchSwitch>;
+                             SetLaunchSettings, SetLaunchSwitch, Shift, SetClutch, StartRollerRun>;
 
 struct IncomingCommand {
     std::string clientId;
@@ -88,12 +102,19 @@ struct OverrunSettingsData {
     OverrunSettings settings;
 };
 
+/// Result of a roller run; sent as `dynoResult` with kind "roller".
+struct RollerResult {
+    int gear;
+    double overallRatio; // to turn the wheel torque into an engine-equivalent torque
+    std::vector<RollerSample> samples;
+};
+
 struct LaunchSettingsData {
     LaunchSettings settings;
 };
 
 using OutgoingPayload = std::variant<Ack, ErrorReply, TableData, DynoProgress, DynoResult,
-                                     OverrunSettingsData, LaunchSettingsData>;
+                                     OverrunSettingsData, LaunchSettingsData, RollerResult>;
 
 struct OutgoingMessage {
     std::string clientId; // empty = broadcast to all clients
@@ -103,7 +124,7 @@ struct OutgoingMessage {
 
 // --- state (simulation -> clients, sent at 60 Hz) ---
 
-enum class DynoMode { Free, Sweep };
+enum class DynoMode { Free, Sweep, Roller };
 
 struct StateSnapshot {
     double time_s = 0.0;
@@ -138,6 +159,8 @@ struct StateSnapshot {
     std::optional<double> clutchEngagement; // 0 = open (pedal pressed) .. 1 = closed
     std::optional<double> vehicleSpeed_m_s;
     std::optional<double> wheelTorque_Nm; // sum of both driven wheels
+    bool clutchLocked = false;            // engine and car turn together
+    bool shifting = false;                // torque interruption of a shift
 };
 
 } // namespace simcore

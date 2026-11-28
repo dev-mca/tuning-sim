@@ -42,12 +42,21 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
 | `getLaunchSettings` | `{}` | `launchSettings` |
 | `setLaunchSettings` | `{ "enabled": true, "launch_rpm": 4000, "retard_deg": 10 }` (launch 2000..6500, retard 0..30) | `ack` oder `error`; danach `launchSettings` an alle |
 | `setLaunchSwitch` | `{ "held": true }` (Launch-Taste, wie das Pedal ein Live-Eingang, nicht Teil des Tunes) | `ack` |
+| `shift` | `{ "gear": 2 }` (0 = Leerlauf, 1..6; sequenziell mit automatischer Kupplung) | `ack` oder `error` (ungültiger Gang, Schaltung läuft, Dyno-Lauf) |
+| `setClutch` | `{ "pressed": true }` (Kupplungspedal; getreten = Kupplung offen) | `ack` |
+| `startRollerRun` | `{ "gear": 4, "rpmFrom": 1500, "rpmTo": 6800 }` (`rpmFrom`/`rpmTo` optional) | `ack` oder `error`; danach `dynoProgress` und am Ende `dynoResult` mit `kind: "roller"` an alle |
 
 - `x`/`y` sind Indizes (Spalte = Drehzahl-Bin, Zeile = MAP-Bin), `value` in der Einheit der Tabelle.
 - `setTableCells` gilt ganz oder gar nicht: Ist eine Zelle ungültig, wird nichts geändert.
 - `ignitionMbt` ist eine Motoreigenschaft und lässt sich nur lesen.
 - Während eines Sweeps steuert der Dyno die Drehzahl, und das Pedal folgt `startSweep.pedal`.
   Nach dem Sweep läuft der Motor wieder frei mit dem zuletzt gesetzten Pedalwert.
+- Seit Iteration 10 steht das Auto immer auf dem Rollenprüfstand (research.md §8.4). Im Leerlauf
+  oder mit getretener Kupplung dreht der Motor frei wie bisher. `startSweep` (Motorprüfstand) nimmt
+  den Gang heraus. Während eines Sweeps oder Rollenlaufs sind `shift` und Launch wirkungslos bzw.
+  abgelehnt; `stopSweep` beendet beide Läufe.
+- Der 2-Step ist scharf, wenn die Launch-Taste gehalten **oder** die Kupplung im Stand (< 5 km/h)
+  getreten ist.
 
 ## simcore → UI
 
@@ -71,7 +80,8 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
   "fuelflow_kg_s": 0.0035, "egt_C": 742.0, "dynoMode": "free", "sweepProgress": 0.0,
   "cutActive": false } }
 ```
-`dynoMode`: `free` (Motor läuft ohne Bremse) oder `sweep`. `torque_Nm` ist das effektive Moment
+`dynoMode`: `free` (kein Prüfstandslauf: Motor frei oder Fahren auf der Rolle), `sweep` (Motorprüfstand)
+oder `roller` (Rollenlauf). `torque_Nm` ist das effektive Moment
 des Motors, `cutActive` meldet eine aktive Kraftstoffabschaltung (Drehzahlbegrenzer oder Schubabschaltung).
 Seit Iteration 7b zusätzlich `catalyst_C` (Kat-Temperatur) und `overrunFueling` (die ECU spritzt im
 Schub ein, weil die Schubabschaltung aus ist: Pops möglich).
@@ -82,6 +92,8 @@ Seit 10a stehen die vereinbarten Felder für spätere Iterationen schon im `stat
 heisst «nicht vorhanden»: `iat_C`, `boost_kPa`, `turboSpeed_rpm`, `wastegateDuty_pct` (Iteration 8),
 `knockRetard_deg` (0 ohne Klopfen), `gear` (0 = Leerlauf, 1.. = Gänge), `clutch` (0 = offen .. 1 =
 geschlossen), `vehicleSpeed_kmh`, `wheelTorque_Nm` (Iteration 10).
+Seit Iteration 10 sind `gear`, `clutch`, `vehicleSpeed_kmh` und `wheelTorque_Nm` immer Zahlen, dazu
+`clutchLocked` (Motor und Auto drehen gemeinsam) und `shifting` (Zugkraftunterbrechung beim Schalten).
 
 ### `overrunSettings` (Antwort auf `getOverrunSettings`, Broadcast nach `setOverrunSettings`)
 ```json
@@ -92,8 +104,10 @@ geschlossen), `vehicleSpeed_kmh`, `wheelTorque_Nm` (Iteration 10).
 
 ### `launchSettings` (Antwort auf `getLaunchSettings`, Broadcast nach `setLaunchSettings`)
 ```json
-{ "v": 1, "type": "launchSettings", "payload": { "enabled": false, "launch_rpm": 4000, "retard_deg": 0 } }
+{ "v": 1, "type": "launchSettings", "payload": { "enabled": false, "launch_rpm": 4000, "retard_deg": 0, "flatShift": false } }
 ```
+`flatShift` (seit Iteration 10, beim Setzen optional): beim Hochschalten mit offenem Gas unterbricht die ECU
+die Zündung, statt dass der Motor hochdreht.
 Launch Control / 2-Step (research.md §3.4, Serie: aus). Mit gedrückter Launch-Taste und offenem Gas zündet
 die ECU um `retard_deg` später und hält `launch_rpm` mit Zündunterbrechung; der weiter eingespritzte
 Kraftstoff kann im heissen Auspuff knallen.
@@ -120,10 +134,12 @@ Gleiches Format wie die Dateien in `shared/tables/` (plan.md §5.1), dazu `edita
 { "v": 1, "type": "dynoProgress", "payload": { "progress": 0.42, "rpm": 3520.0 } }
 ```
 
-### `dynoResult` (am Ende eines Sweeps, an alle)
-Parallele Arrays, ein Eintrag pro 100 1/min:
+### `dynoResult` (am Ende eines Sweeps oder Rollenlaufs, an alle)
+Parallele Arrays, ein Eintrag pro 100 1/min. `kind`: `engine` (Motorprüfstand, `gear` = `null`) oder
+`roller` (Rollenlauf im Gang `gear`: `power_kW` = Radleistung, `torque_Nm` = Radmoment / Gesamtübersetzung,
+also um die Verluste im Antriebsstrang kleiner als das Motormoment).
 ```json
-{ "v": 1, "type": "dynoResult", "payload": {
+{ "v": 1, "type": "dynoResult", "payload": { "kind": "engine", "gear": null,
   "rpm": [...], "torque_Nm": [...], "power_kW": [...], "lambda": [...], "map_kPa": [...],
   "ignition_deg": [...], "egt_C": [...], "airflow_kg_s": [...] } }
 ```
@@ -142,7 +158,7 @@ Inkompatible Änderungen (Felder umbenennen oder entfernen, Einheiten ändern) e
 
 ## Geplant (spätere Iterationen)
 
-`setDynoMode` (holdRpm), `loadEngine`, `shift`/`setClutch` (10).
+`setDynoMode` (holdRpm), `loadEngine`.
 Tunes speichert und lädt die UI selbst (ADR 0006); beim Laden sendet sie die abweichenden Zellen
 per `setTableCells`, ein eigenes `saveTune`/`loadTune` ist daher nicht vorgesehen.
 

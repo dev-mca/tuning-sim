@@ -43,6 +43,8 @@ public:
     void setClutchPedal(bool pressed) noexcept { pedalPressed_ = pressed; }
     /// Starts a shift to `gear` (0 = neutral); false if invalid or already shifting.
     bool shift(int gear) noexcept;
+    /// Takes the gear out at once (engine dyno sweep: the brake sits on the crank).
+    void setNeutral() noexcept;
     /// Puts the car in `gear` with a closed clutch at the speed that matches the engine.
     void placeInGear(int gear, double engineSpeed_rad_s);
 
