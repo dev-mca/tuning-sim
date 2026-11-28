@@ -40,6 +40,7 @@ struct LaunchSettings {
     /// Speed the ECU holds by cutting the spark while the launch switch is held.
     double launchSpeed_rad_s = units::rpmToRadS(kDefaultLaunch_rpm);
     double retard_deg = 0.0; // ignition taken back from the map while launch control is active
+    bool flatShift = false;  // cut the spark during an upshift at open throttle (§3.4)
 };
 
 /// Allowed ranges of the launch settings; outside them the ECU rejects the change.
@@ -68,9 +69,10 @@ struct EcuCommand {
     double ignition_deg;
     double lambdaTarget;
     bool fuelCut;
-    bool overrunFueling = false; // fuelling in overrun with the cut switched off: pops possible
-    bool launchActive = false;   // launch control works (enabled, switch held, throttle open)
-    bool sparkCut = false;       // launch control cuts the spark but keeps injecting
+    bool overrunFueling = false;  // fuelling in overrun with the cut switched off: pops possible
+    bool launchActive = false;    // launch control works (enabled, switch held, throttle open)
+    bool sparkCut = false;        // launch control or flat shift cuts the spark, keeps injecting
+    bool flatShiftActive = false; // flat shift cuts the spark during a shift
 };
 
 class Ecu {
@@ -84,6 +86,8 @@ public:
 
     /// The driver's launch button (later: clutch pedal while standing, iteration 10).
     void setLaunchSwitch(bool held) noexcept { launchSwitch_ = held; }
+    /// The gearbox interrupts the torque for a shift (iteration 10).
+    void setShiftCutRequest(bool requested) noexcept { shiftCutRequest_ = requested; }
     [[nodiscard]] bool launchSwitch() const noexcept { return launchSwitch_; }
 
     [[nodiscard]] const Tune& tune() const noexcept { return tune_; }
@@ -104,6 +108,7 @@ private:
     bool inOverrun_ = false;
     bool launchSwitch_ = false;
     bool launchCut_ = false;
+    bool shiftCutRequest_ = false;
 };
 
 } // namespace simcore

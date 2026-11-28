@@ -39,11 +39,15 @@ EcuCommand Ecu::update(double speed_rad_s, double manifoldPressure_Pa, double in
     updateRevLimiter(speed_rad_s);
     updateOverrun(speed_rad_s, throttle);
     const bool launchActive = updateLaunch(speed_rad_s, throttle);
+    // Flat shift: keep the throttle open during an upshift, the spark cut keeps the engine from
+    // flaring up while the clutch is open (research.md §3.4).
+    const bool flatShiftActive =
+        tune_.launch.flatShift && shiftCutRequest_ && throttle > overrun_.closedThrottle;
     const OverrunSettings& overrun = tune_.overrun;
     const double lambdaTarget = tune_.lambdaTarget.lookup(speed_rad_s, manifoldPressure_Pa);
     double ignition_deg = tune_.ignition.lookup(speed_rad_s, manifoldPressure_Pa);
     if (limiterCut_ || (inOverrun_ && overrun.fuelCut)) {
-        return {0.0, ignition_deg, lambdaTarget, true, false, false, false};
+        return {0.0, ignition_deg, lambdaTarget, true, false, false, false, false};
     }
     if (inOverrun_) {
         ignition_deg = ignition_deg - overrun.retard_deg;
@@ -65,7 +69,8 @@ EcuCommand Ecu::update(double speed_rad_s, double manifoldPressure_Pa, double in
             false,
             inOverrun_,
             launchActive,
-            launchActive && launchCut_};
+            (launchActive && launchCut_) || flatShiftActive,
+            flatShiftActive};
 }
 
 bool Ecu::updateLaunch(double speed_rad_s, double throttle) noexcept {

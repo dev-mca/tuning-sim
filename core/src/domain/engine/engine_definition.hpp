@@ -81,6 +81,30 @@ struct ExhaustGeometry {
     double tailpipeDiameter_m = 0.0;
 };
 
+/// Gearbox, clutch and the car on the roller dyno (research.md §8).
+struct DrivetrainParameters {
+    std::vector<double> gearRatios; // i_g of the forward gears, index 0 = 1st gear
+    double finalDriveRatio = 1.0;
+    double efficiency = 1.0; // eta_dl of gearbox and differential, on the wheel torque (§8.1)
+    double wheelRadius_m = 0.3;
+    double vehicleMass_kg = 1000.0;
+    double wheelInertia_kgm2 = 0.0; // all wheels, axles and the propshaft, at wheel speed
+    double dragArea_m2 = 0.0;       // c_w * A
+    double rollingResistance = 0.0; // c_r
+    double clutchMaxTorque_Nm = 0.0;
+    double clutchReleaseTime_s = 1.0; // pedal up to a fully closed clutch
+    double shiftTime_s = 0.1;         // torque interruption; the gear changes at its end
+    double shiftEngageTime_s = 0.1;   // clutch closing after a shift
+    double launchMaxSpeed_m_s = 0.0;  // the clutch arms launch control only below this speed
+    double stallSpeed_rad_s = 0.0;    // below this the engine has stalled
+
+    [[nodiscard]] int gearCount() const noexcept { return static_cast<int>(gearRatios.size()); }
+    /// i = i_g i_f from engine to wheels (research.md §8.1); gear 1 = first gear.
+    [[nodiscard]] double overallRatio(int gear) const {
+        return gearRatios.at(static_cast<std::size_t>(gear - 1)) * finalDriveRatio;
+    }
+};
+
 struct EngineDefinition {
     std::string id;
     std::string name;
@@ -103,6 +127,7 @@ struct EngineDefinition {
     ExhaustGeometry exhaustGeometry;
     OverrunCutParameters overrunCut;
     AfterburnParameters afterburn;
+    DrivetrainParameters drivetrain;
 
     /// V_d = z pi/4 B^2 S (research.md §1.4).
     [[nodiscard]] double displacement_m3() const noexcept {

@@ -6,6 +6,7 @@ add_executable(simcore_tests
   engine_model_test.cpp
   golden_test.cpp
   launch_test.cpp
+  drivetrain_test.cpp
   concurrency_test.cpp
   protocol_test.cpp
   protocol_contract_test.cpp

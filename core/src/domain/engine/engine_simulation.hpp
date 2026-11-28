@@ -8,6 +8,7 @@
 #include "domain/ecu/ecu.hpp"
 #include "domain/engine/engine_model.hpp"
 
+#include <algorithm>
 #include <optional>
 
 namespace simcore {
@@ -41,6 +42,15 @@ public:
     /// Advances by one time step with throttle 0..1 and the load (brake) torque.
     SimulationState step(double throttle, double loadTorque_Nm) noexcept;
 
+    /// First half of a step: ECU, manifold and engine torque at the current speed. The
+    /// drivetrain needs the engine torque before it knows the load (clutch) torque.
+    const EngineOutputs& prepare(double throttle) noexcept;
+    /// Second half: crank speed and catalyst with the given load torque.
+    SimulationState finish(double loadTorque_Nm) noexcept;
+
+    /// Clutch locking or the starter set the crank speed directly.
+    void setSpeed_rad_s(double speed_rad_s) noexcept { speed_rad_s_ = std::max(0.0, speed_rad_s); }
+
     [[nodiscard]] double timeStep_s() const noexcept { return timeStep_s_; }
     [[nodiscard]] double speed_rad_s() const noexcept { return speed_rad_s_; }
     [[nodiscard]] const EngineDefinition& definition() const noexcept { return definition_; }
@@ -60,6 +70,10 @@ private:
     double manifoldPressure_Pa_;
     double manifoldTemperature_K_;
     double catalystTemperature_K_;
+    // Between prepare() and finish():
+    double pendingThrottle_ = 0.0;
+    EcuCommand pendingCommand_{};
+    EngineOutputs pendingOutputs_{};
 };
 
 } // namespace simcore

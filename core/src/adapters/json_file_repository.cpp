@@ -93,6 +93,30 @@ AfterburnParameters parseAfterburn(const json& afterburn) {
             units::celsiusToKelvin(afterburn.at("catalystInitial_C").get<double>())};
 }
 
+DrivetrainParameters parseDrivetrain(const json& drivetrain) {
+    DrivetrainParameters parameters{
+        drivetrain.at("gearRatios").get<std::vector<double>>(),
+        drivetrain.at("finalDriveRatio").get<double>(),
+        drivetrain.at("efficiency").get<double>(),
+        drivetrain.at("wheelRadius_m").get<double>(),
+        drivetrain.at("vehicleMass_kg").get<double>(),
+        drivetrain.at("wheelInertia_kg_m2").get<double>(),
+        drivetrain.at("dragArea_m2").get<double>(),
+        drivetrain.at("rollingResistance").get<double>(),
+        drivetrain.at("clutchMaxTorque_Nm").get<double>(),
+        drivetrain.at("clutchReleaseTime_s").get<double>(),
+        drivetrain.at("shiftTime_s").get<double>(),
+        drivetrain.at("shiftEngageTime_s").get<double>(),
+        units::kmhToMs(drivetrain.at("launchMaxSpeed_kmh").get<double>()),
+        rpm(drivetrain, "stallSpeed_rpm")};
+    if (parameters.gearRatios.empty() ||
+        std::any_of(parameters.gearRatios.begin(), parameters.gearRatios.end(),
+                    [](double ratio) { return ratio <= 0.0; })) {
+        throw std::runtime_error("drivetrain.gearRatios needs at least one positive ratio");
+    }
+    return parameters;
+}
+
 /// Every cylinder needs a primary pipe and must flow into exactly one collector group.
 void validateExhaustGeometry(const ExhaustGeometry& exhaust, int cylinders) {
     if (exhaust.primaryLength_m.size() != static_cast<std::size_t>(cylinders)) {
@@ -168,7 +192,8 @@ LoadedEngine JsonFileRepository::load(const std::string& engineId) const {
             {rpm(data.at("overrunFuelCut"), "enter_rpm"),
              rpm(data.at("overrunFuelCut"), "exit_rpm"),
              data.at("overrunFuelCut").at("closedThrottle").get<double>()},
-            parseAfterburn(data.at("afterburn"))};
+            parseAfterburn(data.at("afterburn")),
+            parseDrivetrain(data.at("drivetrain"))};
 
         const auto cylinders = static_cast<std::size_t>(definition.cylinders);
         if (definition.firingOrder.size() != cylinders ||
