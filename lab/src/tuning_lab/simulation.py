@@ -81,6 +81,10 @@ class EngineSimulation:
     def definition(self) -> EngineDefinition:
         return self._definition
 
+    def set_launch_switch(self, held: bool) -> None:
+        """Launch button held (2-step, research.md §3.4)."""
+        self._ecu.set_launch_switch(held)
+
     def step(self, throttle: float, load_torque_nm: float) -> SimulationState:
         """Advances the simulation by one time step."""
         dt = self._time_step_s
@@ -95,6 +99,7 @@ class EngineSimulation:
                 manifold_temperature_k=self._manifold_temperature_k,
                 fuel_mass_per_cycle_kg=command.fuel_mass_per_cycle_kg,
                 ignition_deg=command.ignition_deg,
+                spark_cut=command.spark_cut,
             )
         )
         # Semi-implicit Euler for the crank: new speed from the current torque balance.
