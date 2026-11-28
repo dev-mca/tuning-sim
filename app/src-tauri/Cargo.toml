@@ -1,0 +1,27 @@
+[package]
+name = "tuning-sim-app"
+version = "0.1.0"
+description = "tuning-sim desktop shell: starts simcore as a sidecar and shows the UI"
+edition = "2024"
+rust-version = "1.90"
+license = "UNLICENSED"
+publish = false
+
+[lib]
+name = "tuning_sim_shell"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tuning-sim"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.7.6", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.7", features = [] }
+tauri-plugin-dialog = "2.8.4"
+libc = "0.2.191"
+
+[profile.release]
+strip = true
