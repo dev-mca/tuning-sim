@@ -11,6 +11,7 @@ import { clutchStatus, gearLabel } from './drivetrainDisplay.ts';
 const SHIFT_UP_KEY = 'e';
 const SHIFT_DOWN_KEY = 'q';
 const CLUTCH_KEY = 'c';
+const BRAKE_KEY = 'b';
 
 const CLUTCH_TEXT = {
   open: 'neutral',
@@ -26,7 +27,7 @@ const CLUTCH_TEXT = {
  */
 export function DrivetrainPanel() {
   const store = useStore();
-  const { clutchPressed, sweep } = useSnapshot();
+  const { clutchPressed, brakePressed, sweep } = useSnapshot();
   const gearRef = useRef<HTMLSpanElement>(null);
   const speedRef = useRef<HTMLSpanElement>(null);
   const wheelTorqueRef = useRef<HTMLSpanElement>(null);
@@ -42,6 +43,9 @@ export function DrivetrainPanel() {
       if (key === CLUTCH_KEY) {
         event.preventDefault();
         store.setClutch(true); // repeated key events are filtered by the store
+      } else if (key === BRAKE_KEY) {
+        event.preventDefault();
+        store.setBrake(true);
       } else if (!event.repeat && key === SHIFT_UP_KEY) {
         store.shiftBy(1);
       } else if (!event.repeat && key === SHIFT_DOWN_KEY) {
@@ -49,12 +53,16 @@ export function DrivetrainPanel() {
       }
     };
     const up = (event: KeyboardEvent): void => {
-      if (event.key.toLowerCase() === CLUTCH_KEY) {
+      const key = event.key.toLowerCase();
+      if (key === CLUTCH_KEY) {
         store.setClutch(false);
+      } else if (key === BRAKE_KEY) {
+        store.setBrake(false);
       }
     };
     const release = (): void => {
-      store.setClutch(false); // the window lost focus while the key was held
+      store.setClutch(false); // the window lost focus while a key was held
+      store.setBrake(false);
     };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
@@ -92,6 +100,9 @@ export function DrivetrainPanel() {
 
   const hold = (pressed: boolean) => () => {
     store.setClutch(pressed);
+  };
+  const brake = (pressed: boolean) => () => {
+    store.setBrake(pressed);
   };
 
   return (
@@ -160,6 +171,18 @@ export function DrivetrainPanel() {
         >
           Clutch
         </button>
+        <button
+          type="button"
+          aria-pressed={brakePressed}
+          onPointerDown={brake(true)}
+          onPointerUp={brake(false)}
+          onPointerLeave={brake(false)}
+          onPointerCancel={brake(false)}
+          title="Hold (or hold B) for full brake; standing, the brake holds the car"
+          className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold tracking-[0.2em] text-ink uppercase transition select-none aria-pressed:border-redline aria-pressed:bg-redline aria-pressed:text-canvas"
+        >
+          Brake
+        </button>
         <p className="text-xs text-muted">
           <kbd className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-ink">
             E
@@ -172,7 +195,11 @@ export function DrivetrainPanel() {
           <kbd className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-ink">
             C
           </kbd>{' '}
-          clutch. Launch: 1st gear, hold C, floor it (2-step), release C.
+          clutch,{' '}
+          <kbd className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-ink">
+            B
+          </kbd>{' '}
+          brake. Launch: 1st gear, hold C, floor it (2-step), release C.
         </p>
       </div>
     </Panel>

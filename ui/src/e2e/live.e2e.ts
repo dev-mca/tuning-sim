@@ -134,6 +134,9 @@ describe('UI store against a live simcore', () => {
       expect(moving.wheelTorque_Nm ?? 0).toBeGreaterThan(0);
       store.setPedal(0);
       store.setClutch(true);
+      store.setBrake(true);
+      await waitFor('the braked car standing', () => store.latestState()?.vehicleSpeed_kmh === 0);
+      store.setBrake(false);
       store.shiftBy(-1);
       await waitFor('neutral again', () => store.latestState()?.gear === 0);
       store.setClutch(false);
