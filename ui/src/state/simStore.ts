@@ -67,11 +67,21 @@ export interface SimSnapshot {
   originalLaunch: LaunchSettings | null;
   /** Whether the user holds the launch button (a live input like the pedal). */
   launchSwitch: boolean;
+  /** Whether the user presses the clutch pedal (live input, iteration 10). */
+  clutchPressed: boolean;
 }
 
 export interface Toast {
   tone: 'error' | 'info';
   text: string;
+}
+
+/** Highest gear of the reference car (shared/engines/i6_30_na.json, drivetrain.gearRatios). */
+const MAX_GEAR = 6;
+
+function ordinal(gear: number): string {
+  const suffix = gear === 1 ? 'st' : gear === 2 ? 'nd' : gear === 3 ? 'rd' : 'th';
+  return `${String(gear)}${suffix}`;
 }
 
 const IDLE_SWEEP: SweepStatus = { active: false, progress: 0, rpm: 0 };
@@ -123,6 +133,7 @@ export class SimStore {
       launch: null,
       originalLaunch: null,
       launchSwitch: false,
+      clutchPressed: false,
     };
   }
 
@@ -175,6 +186,34 @@ export class SimStore {
   startSweep(request: StartSweepPayload): void {
     this.sweepTune = this.describeTune();
     this.send({ type: 'startSweep', payload: request });
+  }
+
+  /** Roller run in one gear (iteration 10); the result arrives as a dynoResult of kind roller. */
+  startRollerRun(gear: number): void {
+    this.sweepTune = this.describeTune();
+    this.send({ type: 'startRollerRun', payload: { gear } });
+  }
+
+  /** Sequential shift relative to the gear simcore reports (0 = neutral .. top gear). */
+  shiftBy(delta: number): void {
+    const gear = this.state?.gear;
+    if (gear === undefined || gear === null) {
+      return;
+    }
+    const target = gear + delta;
+    if (target < 0 || target > MAX_GEAR) {
+      return;
+    }
+    this.send({ type: 'shift', payload: { gear: target } });
+  }
+
+  /** Presses or releases the clutch pedal; repeated calls with the same value send nothing. */
+  setClutch(pressed: boolean): void {
+    if (this.snapshot.clutchPressed === pressed) {
+      return;
+    }
+    this.update({ clutchPressed: pressed });
+    this.send({ type: 'setClutch', payload: { pressed } });
   }
 
   stopSweep(): void {
@@ -378,8 +417,9 @@ export class SimStore {
     this.send({ type: 'getOverrunSettings', payload: {} });
     this.send({ type: 'getLaunchSettings', payload: {} });
     // A held button may have been released while disconnected: start released (safe).
-    this.update({ launchSwitch: false });
+    this.update({ launchSwitch: false, clutchPressed: false });
     this.send({ type: 'setLaunchSwitch', payload: { held: false } });
+    this.send({ type: 'setClutch', payload: { pressed: false } });
   }
 
   /** A rejected table edit leaves the optimistic local copy wrong, so fetch the real table. */
@@ -402,8 +442,10 @@ export class SimStore {
     if (mode.dynoMode !== state.dynoMode || mode.cutActive !== state.cutActive) {
       this.update({ engineMode: { dynoMode: state.dynoMode, cutActive: state.cutActive } });
     }
-    const sweepEnded = this.snapshot.sweep.active && state.dynoMode !== 'sweep';
-    const sweepStarted = !this.snapshot.sweep.active && state.dynoMode === 'sweep';
+    // A roller run behaves like a sweep in the UI: progress, then a dyno result.
+    const running = state.dynoMode !== 'free';
+    const sweepEnded = this.snapshot.sweep.active && !running;
+    const sweepStarted = !this.snapshot.sweep.active && running;
     if (sweepEnded) {
       this.update({ sweep: IDLE_SWEEP });
     } else if (sweepStarted) {
@@ -423,7 +465,12 @@ export class SimStore {
     const runNumber = this.nextRunNumber++;
     const note = this.sweepTune ?? this.describeTune();
     this.sweepTune = null;
-    this.update({ runs: addRun(this.snapshot.runs, runNumber, result, note), sweep: IDLE_SWEEP });
+    const runs = addRun(this.snapshot.runs, runNumber, result, note);
+    const last = runs.at(-1);
+    if (last !== undefined && result.kind === 'roller' && result.gear !== null) {
+      last.label = `${last.label} · roller ${ordinal(result.gear)}`;
+    }
+    this.update({ runs, sweep: IDLE_SWEEP });
   }
 
   // --- helpers ---------------------------------------------------------------------------

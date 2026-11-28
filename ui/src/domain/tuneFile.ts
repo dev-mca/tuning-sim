@@ -104,8 +104,13 @@ export function parseTuneFile(text: string): TuneFile {
   if (data.overrun !== undefined && !isOverrunSettings(data.overrun)) {
     throw new TuneFileError('overrun settings are malformed');
   }
-  if (data.launch !== undefined && !isLaunchSettings(data.launch)) {
-    throw new TuneFileError('launch settings are malformed');
+  if (data.launch !== undefined) {
+    if (!isLaunchSettings(data.launch)) {
+      throw new TuneFileError('launch settings are malformed');
+    }
+    // Tune files of iteration 7c have no flat shift: it was not there yet, so it is off.
+    const launch: LaunchSettings = { flatShift: false, ...data.launch };
+    data.launch = launch;
   }
   return data as unknown as TuneFile;
 }
@@ -202,14 +207,18 @@ function isOverrunSettings(value: unknown): value is OverrunSettings {
   );
 }
 
-function isLaunchSettings(value: unknown): value is LaunchSettings {
+/** Launch settings as stored; files of iteration 7c have no flatShift yet. */
+type StoredLaunchSettings = Omit<LaunchSettings, 'flatShift'> & { flatShift?: boolean };
+
+function isLaunchSettings(value: unknown): value is StoredLaunchSettings {
   return (
     isRecord(value) &&
     typeof value.enabled === 'boolean' &&
     typeof value.launch_rpm === 'number' &&
     Number.isFinite(value.launch_rpm) &&
     typeof value.retard_deg === 'number' &&
-    Number.isFinite(value.retard_deg)
+    Number.isFinite(value.retard_deg) &&
+    (value.flatShift === undefined || typeof value.flatShift === 'boolean')
   );
 }
 

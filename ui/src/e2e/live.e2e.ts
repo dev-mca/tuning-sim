@@ -96,7 +96,7 @@ describe('UI store against a live simcore', () => {
   it(
     'holds the launch speed with the 2-step and revs on after release (iteration 7c)',
     async () => {
-      store.setLaunch({ enabled: true, launch_rpm: 4000, retard_deg: 10 });
+      store.setLaunch({ enabled: true, launch_rpm: 4000, retard_deg: 10, flatShift: false });
       store.setLaunchSwitch(true);
       store.setPedal(1);
       const held = await waitFor('2-step at the launch speed', () => {

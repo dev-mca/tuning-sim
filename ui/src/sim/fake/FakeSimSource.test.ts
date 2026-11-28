@@ -237,26 +237,31 @@ describe('FakeSimSource launch control', () => {
     send(source, {
       type: 'setLaunchSettings',
       id: 'bad',
-      payload: { enabled: true, launch_rpm: 9000, retard_deg: 10 },
+      payload: { enabled: true, launch_rpm: 9000, retard_deg: 10, flatShift: false },
     });
     send(source, {
       type: 'setLaunchSettings',
       id: 'ok',
-      payload: { enabled: true, launch_rpm: 4000, retard_deg: 10 },
+      payload: { enabled: true, launch_rpm: 4000, retard_deg: 10, flatShift: false },
     });
     vi.advanceTimersByTime(0);
     const settings = ofType(messages, 'launchSettings');
     expect(settings[0]?.id).toBe('g');
     expect(settings[0]?.payload.enabled).toBe(false);
     expect(ofType(messages, 'error').map((error) => error.id)).toEqual(['bad']);
-    expect(settings.at(-1)?.payload).toEqual({ enabled: true, launch_rpm: 4000, retard_deg: 10 });
+    expect(settings.at(-1)?.payload).toEqual({
+      enabled: true,
+      launch_rpm: 4000,
+      retard_deg: 10,
+      flatShift: false,
+    });
   });
 
   it('holds the launch speed at full pedal while the button is held', () => {
     const { source, messages } = connectedSource();
     send(source, {
       type: 'setLaunchSettings',
-      payload: { enabled: true, launch_rpm: 4000, retard_deg: 10 },
+      payload: { enabled: true, launch_rpm: 4000, retard_deg: 10, flatShift: false },
     });
     send(source, { type: 'setLaunchSwitch', payload: { held: true } });
     send(source, { type: 'setPedal', payload: { value: 1 } });
@@ -271,5 +276,40 @@ describe('FakeSimSource launch control', () => {
     const released = ofType(messages, 'state').at(-1)?.payload;
     expect(released?.launchActive).toBe(false);
     expect(released?.rpm).toBeGreaterThan(6000);
+  });
+});
+
+describe('FakeSimSource drivetrain', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('shifts, reports gear and clutch and rejects invalid gears', () => {
+    const { source, messages } = connectedSource();
+    send(source, { type: 'shift', id: 'bad', payload: { gear: 9 } });
+    send(source, { type: 'setClutch', payload: { pressed: true } });
+    send(source, { type: 'shift', id: 'ok', payload: { gear: 2 } });
+    vi.advanceTimersByTime(200);
+    expect(ofType(messages, 'error').map((error) => error.id)).toEqual(['bad']);
+    const state = ofType(messages, 'state').at(-1)?.payload;
+    expect(state?.gear).toBe(2);
+    expect(state?.clutch).toBe(0);
+    expect(state?.vehicleSpeed_kmh).toBe(0);
+  });
+
+  it('answers a roller run with a roller result below the engine power', () => {
+    const { source, messages } = connectedSource();
+    send(source, { type: 'startRollerRun', payload: { gear: 4, rpmFrom: 3000, rpmTo: 4000 } });
+    vi.advanceTimersByTime(500);
+    expect(ofType(messages, 'state').at(-1)?.payload.dynoMode).toBe('roller');
+    vi.advanceTimersByTime(5000);
+    const result = ofType(messages, 'dynoResult').at(-1)?.payload;
+    expect(result?.kind).toBe('roller');
+    expect(result?.gear).toBe(4);
+    expect(result?.rpm.length).toBe(11);
   });
 });

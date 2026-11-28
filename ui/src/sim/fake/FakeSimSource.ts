@@ -2,6 +2,8 @@ import { applyCells } from '../../domain/tableEdit.ts';
 import {
   type CellValue,
   type ClientMessage,
+  type DynoResultPayload,
+  type StartRollerRunPayload,
   type LaunchSettings,
   type OverrunSettings,
   PROTOCOL_VERSION,
@@ -13,7 +15,7 @@ import {
 import type { ConnectionStatus, SimSource } from '../SimSource.ts';
 import { fakeDynoResult, type TableSet } from './fakeDyno.ts';
 import { FakeEngine } from './fakeEngine.ts';
-import { REFERENCE_ENGINE, referenceTables } from './referenceData.ts';
+import { REFERENCE_DRIVETRAIN, REFERENCE_ENGINE, referenceTables } from './referenceData.ts';
 
 /** simcore sends state at about 60 Hz (docs/interface.md). */
 export const FAKE_STATE_RATE_HZ = 60;
@@ -29,6 +31,23 @@ const MIN_LAUNCH_RPM = 2000;
 const MAX_LAUNCH_RPM = 6500;
 const MAX_LAUNCH_RETARD_DEG = 30;
 const DEFAULT_SEED = 1;
+const DEFAULT_ROLLER_FROM_RPM = 1500;
+const DEFAULT_ROLLER_TO_RPM = 6800;
+/** Roughly how fast a roller run in 4th gear climbs (simcore: about 140 1/min per second). */
+const ROLLER_RATE_RPM_S = 300;
+
+/** Fake roller result: the engine curve minus the drivetrain losses. */
+function atTheWheels(result: DynoResultPayload, gear: number): DynoResultPayload {
+  const scale = (values: number[]) =>
+    values.map((value) => value * REFERENCE_DRIVETRAIN.efficiency);
+  return {
+    ...result,
+    kind: 'roller',
+    gear,
+    torque_Nm: scale(result.torque_Nm),
+    power_kW: scale(result.power_kW),
+  };
+}
 
 export interface FakeSimSourceOptions {
   seed?: number;
@@ -51,9 +70,16 @@ export class FakeSimSource implements SimSource {
   private timer: ReturnType<typeof setInterval> | undefined;
   private tick = 0;
   private sweepRange = { rpmFrom: 0, rpmTo: 0 };
+  /** Gear of the running roller run, null during an engine sweep. */
+  private rollerGear: number | null = null;
   /** Stored and echoed only: the fake has no afterburn physics and no sound. */
   private overrun: OverrunSettings = { fuelCut: true, retard_deg: 0, enrichment_pct: 0 };
-  private launch: LaunchSettings = { enabled: false, launch_rpm: 4000, retard_deg: 0 };
+  private launch: LaunchSettings = {
+    enabled: false,
+    launch_rpm: 4000,
+    retard_deg: 0,
+    flatShift: false,
+  };
 
   constructor(options: FakeSimSourceOptions = {}) {
     this.reference = toTableSet(referenceTables());
@@ -150,6 +176,20 @@ export class FakeSimSource implements SimSource {
         this.engine.setLaunchSwitch(message.payload.held);
         this.ack(message.id);
         return;
+      case 'shift':
+        if (this.engine.shift(message.payload.gear)) {
+          this.ack(message.id);
+        } else {
+          this.error(message.id, `cannot shift to gear ${String(message.payload.gear)} now`);
+        }
+        return;
+      case 'setClutch':
+        this.engine.setClutch(message.payload.pressed);
+        this.ack(message.id);
+        return;
+      case 'startRollerRun':
+        this.startRollerRun(message.payload, message.id);
+        return;
     }
   }
 
@@ -169,6 +209,20 @@ export class FakeSimSource implements SimSource {
     this.engine.startSweep(request);
     this.sweepRange = { rpmFrom, rpmTo };
     this.ack(id);
+  }
+
+  /** The fake has no drivetrain physics: a sweep in gear, scaled by the drivetrain efficiency. */
+  private startRollerRun(request: StartRollerRunPayload, id: string | undefined): void {
+    const { gear, rpmFrom = DEFAULT_ROLLER_FROM_RPM, rpmTo = DEFAULT_ROLLER_TO_RPM } = request;
+    if (gear < 1 || gear > REFERENCE_DRIVETRAIN.gearRatios.length) {
+      this.error(id, 'gear must be a forward gear');
+      return;
+    }
+    this.startSweep({ rpmFrom, rpmTo, rate_rpm_s: ROLLER_RATE_RPM_S }, id);
+    if (this.engine.sweepActive) {
+      this.rollerGear = gear;
+      this.engine.placeInGear(gear);
+    }
   }
 
   private setOverrun(settings: OverrunSettings, id: string | undefined): void {
@@ -235,7 +289,8 @@ export class FakeSimSource implements SimSource {
   private onTick(): void {
     const sweepFinished = this.engine.step(1 / FAKE_STATE_RATE_HZ);
     const state = this.engine.state();
-    this.emit({ v: PROTOCOL_VERSION, type: 'state', payload: state });
+    const payload = this.rollerGear !== null ? { ...state, dynoMode: 'roller' as const } : state;
+    this.emit({ v: PROTOCOL_VERSION, type: 'state', payload });
     this.tick++;
     if (this.engine.sweepActive && this.tick % TICKS_PER_PROGRESS === 0) {
       this.emit({
@@ -246,10 +301,13 @@ export class FakeSimSource implements SimSource {
     }
     if (sweepFinished) {
       const { rpmFrom, rpmTo } = this.sweepRange;
+      const result = fakeDynoResult(this.tune, this.reference, rpmFrom, rpmTo);
+      const gear = this.rollerGear;
+      this.rollerGear = null;
       this.emit({
         v: PROTOCOL_VERSION,
         type: 'dynoResult',
-        payload: fakeDynoResult(this.tune, this.reference, rpmFrom, rpmTo),
+        payload: gear === null ? result : atTheWheels(result, gear),
       });
     }
   }

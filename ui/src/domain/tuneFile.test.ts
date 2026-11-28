@@ -181,10 +181,22 @@ describe('overrun settings in tune files', () => {
 describe('launch settings in tune files', () => {
   it('are optional, round-trip and are validated', () => {
     expect(createTuneFile('i6', [ve], savedAt).launch).toBeUndefined();
-    const twoStep = { enabled: true, launch_rpm: 4000, retard_deg: 10 };
+    const twoStep = { enabled: true, launch_rpm: 4000, retard_deg: 10, flatShift: false };
     const tune = createTuneFile('i6', [ve], savedAt, undefined, twoStep);
     expect(parseTuneFile(JSON.stringify(tune)).launch).toEqual(twoStep);
-    const broken = { ...tune, launch: { enabled: 'yes', launch_rpm: 4000, retard_deg: 10 } };
+    const broken = {
+      ...tune,
+      launch: { enabled: 'yes', launch_rpm: 4000, retard_deg: 10, flatShift: false },
+    };
     expect(() => parseTuneFile(JSON.stringify(broken))).toThrow(/launch settings/);
+  });
+
+  it('turns flat shift off for tune files from before iteration 10', () => {
+    const old = createTuneFile('i6', [ve], savedAt);
+    const text = JSON.stringify({
+      ...old,
+      launch: { enabled: true, launch_rpm: 4000, retard_deg: 10 },
+    });
+    expect(parseTuneFile(text).launch?.flatShift).toBe(false);
   });
 });

@@ -6,6 +6,8 @@ import { alignRuns, valueAtRpm } from './alignRuns.ts';
 function run(rpm: number[], torque: number[]): DynoResultPayload {
   const zeros = rpm.map(() => 0);
   return {
+    kind: 'engine',
+    gear: null,
     rpm,
     torque_Nm: torque,
     power_kW: zeros,

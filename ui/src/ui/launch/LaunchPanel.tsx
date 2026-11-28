@@ -15,8 +15,13 @@ const MAX_RETARD_DEG = 30;
 /** Key that holds the launch button (like pressing the clutch while standing). */
 const LAUNCH_KEY = 'l';
 
-const STOCK: LaunchSettings = { enabled: false, launch_rpm: 4000, retard_deg: 0 };
-const TWO_STEP: LaunchSettings = { enabled: true, launch_rpm: 4000, retard_deg: 10 };
+const STOCK: LaunchSettings = { enabled: false, launch_rpm: 4000, retard_deg: 0, flatShift: false };
+const TWO_STEP: LaunchSettings = {
+  enabled: true,
+  launch_rpm: 4000,
+  retard_deg: 10,
+  flatShift: true,
+};
 
 /**
  * Launch control / 2-step (research.md §3.4): while the launch button is held and the throttle

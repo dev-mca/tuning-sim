@@ -114,6 +114,8 @@ export function fakeDynoResult(
   rpmTo: number,
 ): DynoResultPayload {
   const result: DynoResultPayload = {
+    kind: 'engine',
+    gear: null,
     rpm: [],
     torque_Nm: [],
     power_kW: [],

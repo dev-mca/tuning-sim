@@ -17,6 +17,7 @@ import type {
   LaunchSettings,
   OverrunSettings,
   ServerMessage,
+  StartRollerRunPayload,
   StartSweepPayload,
   TableData,
 } from './messages.ts';
@@ -130,10 +131,12 @@ const state: Required<EngineState> = {
   turboSpeed_rpm: null,
   wastegateDuty_pct: null,
   knockRetard_deg: 0,
-  gear: null,
-  clutch: null,
-  vehicleSpeed_kmh: null,
-  wheelTorque_Nm: null,
+  gear: 0,
+  clutch: 1,
+  vehicleSpeed_kmh: 0,
+  wheelTorque_Nm: 0,
+  clutchLocked: false,
+  shifting: false,
 };
 
 const table: TableData = {
@@ -152,6 +155,8 @@ const table: TableData = {
 };
 
 const dynoResult: DynoResultPayload = {
+  kind: 'engine',
+  gear: null,
   rpm: [1000],
   torque_Nm: [249],
   power_kW: [26],
@@ -163,7 +168,12 @@ const dynoResult: DynoResultPayload = {
 };
 
 const overrun: OverrunSettings = { fuelCut: true, retard_deg: 0, enrichment_pct: 0 };
-const launch: LaunchSettings = { enabled: false, launch_rpm: 4000, retard_deg: 0 };
+const launch: LaunchSettings = {
+  enabled: false,
+  launch_rpm: 4000,
+  retard_deg: 0,
+  flatShift: false,
+};
 
 type Sample<M extends { type: string }> = { [T in M['type']]: Extract<M, { type: T }> };
 
@@ -185,6 +195,7 @@ const sweep: Required<StartSweepPayload> = {
   rate_rpm_s: 300,
   pedal: 1,
 };
+const rollerRun: Required<StartRollerRunPayload> = { gear: 4, rpmFrom: 1500, rpmTo: 6800 };
 const cell: CellValue = { x: 3, y: 10, value: 28.5 };
 const audio: AudioSettings = { volume: 0.7, mute: false };
 
@@ -212,9 +223,12 @@ const CLIENT_SAMPLES: Sample<ClientMessage> = {
     v: 1,
     type: 'setLaunchSettings',
     id: '10',
-    payload: { enabled: true, launch_rpm: 4000, retard_deg: 10 },
+    payload: { enabled: true, launch_rpm: 4000, retard_deg: 10, flatShift: true },
   },
   setLaunchSwitch: { v: 1, type: 'setLaunchSwitch', id: '11', payload: { held: true } },
+  shift: { v: 1, type: 'shift', id: '12', payload: { gear: 2 } },
+  setClutch: { v: 1, type: 'setClutch', id: '13', payload: { pressed: true } },
+  startRollerRun: { v: 1, type: 'startRollerRun', id: '14', payload: rollerRun },
 };
 
 function checkAgainstExamples(examples: Map<string, Json>, samples: Record<string, unknown>): void {
