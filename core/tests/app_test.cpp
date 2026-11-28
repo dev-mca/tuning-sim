@@ -79,6 +79,17 @@ TEST_CASE("--sound-launch renders a 2-step with optional launch speed and retard
     CHECK(custom.options->launchRetard_deg == 15.0);
 }
 
+TEST_CASE("--sound-drive renders a drive with flat shift unless switched off") {
+    const CliParseResult drive = parseCommandLine({"--sound-drive", "drive.wav"});
+    REQUIRE(drive.options.has_value());
+    CHECK(drive.options->mode == CliMode::SoundDrive);
+    CHECK(drive.options->soundDriveFile == "drive.wav");
+    CHECK(drive.options->flatShift);
+    const CliParseResult plain = parseCommandLine({"--sound-drive", "d.wav", "--no-flat-shift"});
+    REQUIRE(plain.options.has_value());
+    CHECK_FALSE(plain.options->flatShift);
+}
+
 TEST_CASE("invalid command lines are rejected with a message") {
     for (const auto& arguments :
          std::vector<std::vector<std::string>>{{"--sweep", "1000"},

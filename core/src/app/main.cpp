@@ -104,6 +104,19 @@ int runSoundLaunch(const CliOptions& options, const LoadedEngine& engine) {
     return 0;
 }
 
+int runSoundDrive(const CliOptions& options, const LoadedEngine& engine) {
+    const LaunchSettings launch{true, units::rpmToRadS(options.launch_rpm),
+                                options.launchRetard_deg, options.flatShift};
+    const std::vector<float> samples = renderDriveSound(engine.definition, launch, kSampleRate);
+    if (!writeWav16(options.soundDriveFile, samples, kStereo, kSampleRate)) {
+        std::cerr << "error: cannot write " << options.soundDriveFile << '\n';
+        return 1;
+    }
+    std::cout << "wrote " << options.soundDriveFile << " ("
+              << static_cast<double>(samples.size() / kStereo) / kSampleRate << " s)\n";
+    return 0;
+}
+
 int serve(const CliOptions& options, const LoadedEngine& engine) {
     constexpr auto kMainLoopInterval = std::chrono::milliseconds(100);
     auto bus = std::make_unique<MessageBus>(); // large queues: keep them off the stack
@@ -174,6 +187,8 @@ int main(int argc, char** argv) {
             return runSoundBlips(options, engine);
         case CliMode::SoundLaunch:
             return runSoundLaunch(options, engine);
+        case CliMode::SoundDrive:
+            return runSoundDrive(options, engine);
         default:
             return serve(options, engine);
         }

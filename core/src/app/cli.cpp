@@ -74,6 +74,11 @@ CliParseResult parseCommandLine(const std::vector<std::string>& arguments) {
             } else if (option == "--sound-launch") {
                 options.mode = CliMode::SoundLaunch;
                 options.soundLaunchFile = reader.value(option);
+            } else if (option == "--sound-drive") {
+                options.mode = CliMode::SoundDrive;
+                options.soundDriveFile = reader.value(option);
+            } else if (option == "--no-flat-shift") {
+                options.flatShift = false;
             } else if (option == "--launch-rpm") {
                 options.launch_rpm = parseNumber(reader.value(option), option);
             } else if (option == "--launch-retard") {
@@ -112,6 +117,9 @@ std::string usageText() {
            "                                             throttle blips: limiter and overrun\n"
            "  simcore --sound-launch <file.wav> [--launch-rpm <rpm>] [--launch-retard <deg>]\n"
            "                                             2-step held at full throttle, released\n"
+           "  simcore --sound-drive <file.wav> [--no-flat-shift]\n"
+           "                                             launch and flat-shifted drive on the "
+           "rollers\n"
            "  simcore --version | --help\n"
            "options:\n"
            "  --shared <dir>   folder with engines/ and tables/ (default: repository shared/)\n"

@@ -2,6 +2,8 @@
 
 #include "app/engine_acoustics.hpp"
 #include "app/sound_renderer.hpp"
+#include "domain/common/units.hpp"
+#include "domain/drivetrain/car_simulation.hpp"
 #include "domain/ecu/ecu.hpp"
 #include "domain/engine/engine_simulation.hpp"
 
@@ -84,6 +86,43 @@ std::vector<float> renderBlipSound(const EngineDefinition& definition,
     return renderFreeRunning(
         definition, tune, kBlipScenarioDuration_s,
         [](double time_s, Ecu& /*ecu*/) { return blipScenarioThrottle(time_s); }, sampleRate, seed);
+}
+
+std::vector<float> renderDriveSound(const EngineDefinition& definition,
+                                    const LaunchSettings& launch, std::uint32_t sampleRate,
+                                    std::uint32_t seed) {
+    Tune tune = Tune::fromTables(definition.tables);
+    tune.launch = launch;
+    CarSimulation car(definition, tune);
+    SoundRenderer renderer(exhaustLayout(definition), static_cast<float>(sampleRate), seed);
+    renderer.setOutput(kFullVolume, false);
+    car.drivetrain().setClutchPedal(true);
+    static_cast<void>(car.drivetrain().shift(1));
+
+    const double dt = car.engine().timeStep_s();
+    const auto framesPerStep =
+        static_cast<std::size_t>(std::lround(static_cast<double>(sampleRate) * dt));
+    const auto steps = std::lround(kDriveScenarioDuration_s / dt);
+    const auto clutchUpStep = std::lround(kDriveClutchUp_s / dt);
+    const auto throttleStep = std::lround(kDriveThrottleFrom_s / dt);
+    std::vector<float> output;
+    std::vector<float> block(framesPerStep * kStereo);
+    for (long step = 0; step < steps; ++step) {
+        if (step == clutchUpStep) {
+            car.drivetrain().setClutchPedal(false);
+        }
+        const CarState state = car.step(step >= throttleStep ? 1.0 : 0.0);
+        const DrivetrainState& drivetrain = state.drivetrain;
+        if (units::radSToRpm(state.engine.speed_rad_s) >= kDriveShift_rpm &&
+            drivetrain.clutchState == ClutchState::Locked && drivetrain.gear >= 1 &&
+            drivetrain.gear < kDriveTopGear) {
+            static_cast<void>(car.drivetrain().shift(drivetrain.gear + 1));
+        }
+        renderer.publish(acousticParams(state.engine, definition));
+        renderer.render(block);
+        output.insert(output.end(), block.begin(), block.end());
+    }
+    return output;
 }
 
 LaunchScenarioInputs launchScenarioInputs(double time_s) noexcept {

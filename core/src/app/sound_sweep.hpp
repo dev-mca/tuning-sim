@@ -53,4 +53,18 @@ struct LaunchScenarioInputs {
                                                    std::uint32_t sampleRate = 48000,
                                                    std::uint32_t seed = 1);
 
+/// Drive on the roller dyno: 1st gear, clutch pressed, full throttle from 0.5 s (2-step),
+/// clutch up at 2.5 s, upshifts at 6500 1/min up to 3rd gear, 10 s. Lets you hear launch,
+/// clutch slip, shifts and (with flat shift) the bangs of the shift cut.
+inline constexpr double kDriveScenarioDuration_s = 10.0;
+inline constexpr double kDriveThrottleFrom_s = 0.5;
+inline constexpr double kDriveClutchUp_s = 2.5;
+inline constexpr double kDriveShift_rpm = 6500.0;
+inline constexpr int kDriveTopGear = 3;
+
+[[nodiscard]] std::vector<float> renderDriveSound(const EngineDefinition& definition,
+                                                  const LaunchSettings& launch,
+                                                  std::uint32_t sampleRate = 48000,
+                                                  std::uint32_t seed = 1);
+
 } // namespace simcore
