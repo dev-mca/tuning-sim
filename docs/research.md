@@ -455,6 +455,17 @@ m_eff = m + J_wheels / r² + (J_eng · (i_g i_f)²) / r² (rotierende Massen, im
 ### 8.4 Rollenprüfstand
 Statt Strasse treiben die Räder eine Rolle mit Trägheit J_roll. Ein Trägheits-Rollenprüfstand misst Leistung aus der Beschleunigung der Rolle: P_wheel = J_roll · ω_roll · dω_roll/dt (plus Verluste). Radleistung ist kleiner als Motorleistung (Triebstrangverluste). Genau dieser Unterschied ist ein schönes Lernthema.
 
+### 8.5 Umsetzung in tuning-sim (Iteration 10)
+- **Rolle mit Fahrwiderstand** («road-load»): Die Rolle bildet Masse und Fahrwiderstand des Autos nach, das Auto fährt darauf wie auf der Strasse (§8.2): m_v = m + J_Räder / r², F_res = ½ ρ c_w A v² + c_r m g.
+- **Kupplung als Zustandsautomat** (§8.3): offen (Leerlauf, Pedal, Schaltpause) → gleitend (T_c = ±e · T_max mit Einkupplungsgrad e) → haftend. Haftend wird gemeinsam integriert:
+  dv/dt = (T_e i η / r − F_res) / (m_v + J_e i² η / r²),  T_c = T_e − J_e (i/r) dv/dt.
+  Übersteigt |T_c| die Kapazität, rutscht sie wieder. Gleitend → haftend, wenn der Schlupf kleiner als 1 rad/s ist oder im Schritt das Vorzeichen wechselt; die gemeinsame Drehzahl erhält den Drehimpuls (J_e ω_e + J_in ω_in)/(J_e + J_in) mit J_in = m_v r² / i².
+- **Ein Schritt** wird um den Motor geteilt: Motormoment bei aktueller Drehzahl → Kupplungsmoment als Last → Kurbel integrieren → Auto integrieren (haftend kinematisch v = ω r / i, kein Auseinanderdriften).
+- **Schalten** sequenziell mit automatischer Kupplung: 150 ms Zugkraftunterbrechung (Kupplung offen, Gang wechselt am Ende), danach schliesst die Kupplung in 150 ms. **Flat Shift:** In der Unterbrechung bei offenem Gas unterbricht die ECU die Zündung (wie der 2-Step), sonst dreht der Motor hoch.
+- **Launch Control** ist scharf, wenn die Kupplung im Stand (< 5 km/h) getreten ist; Kupplung loslassen = Losfahren mit gleitender Kupplung.
+- **Abwürgen:** Fällt die Drehzahl unter 350/min, ist der Motor aus; sobald der Antrieb getrennt ist, bringt ihn der «Anlasser» auf Leerlauf.
+- **Rollenlauf:** Vollgas in einem Gang ab 300/min unter der ersten Messdrehzahl. Die Rolle misst die Antriebskraft F an den Reifen, Radleistung P = F v; Radmoment / i als motorbezogenes Moment. Ergebnis beim Referenzauto im 4. Gang: 175 kW an den Rädern gegenüber 196 kW am Motor (−11 %: η = 0,90 plus die Leistung, die die Motorträgheit beschleunigt).
+
 ---
 
 ## 9. Numerik
