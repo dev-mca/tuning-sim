@@ -189,8 +189,8 @@ TEST_CASE("the launch switch is decoded and the state reports launch control") {
 TEST_CASE("charging and drivetrain fields are null until an engine provides them") {
     StateSnapshot state;
     json payload = json::parse(codec().encodeState(state))["payload"];
-    for (const char* field : {"boost_kPa", "turboSpeed_rpm", "wastegateDuty_pct", "gear", "clutch",
-                              "vehicleSpeed_kmh", "wheelTorque_Nm"}) {
+    for (const char* field : {"iat_C", "boost_kPa", "turboSpeed_rpm", "wastegateDuty_pct", "gear",
+                              "clutch", "vehicleSpeed_kmh", "wheelTorque_Nm"}) {
         CAPTURE(field);
         CHECK(payload[field].is_null());
     }

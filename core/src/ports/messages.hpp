@@ -128,10 +128,11 @@ struct StateSnapshot {
     bool sparkCut = false;     // launch control cuts the spark right now
     // Agreed fields for later iterations (plan.md §11); empty = not available (sent as null).
     // Charging (iteration 8):
-    std::optional<double> boostPressure_Pa; // gauge pressure above ambient
-    std::optional<double> turboSpeed_rad_s; // turbocharger shaft speed
-    std::optional<double> wastegateDuty;    // 0..1
-    double knockRetard_deg = 0.0;           // ignition taken back by the knock control
+    std::optional<double> intakeTemperature_K; // after the intercooler; null = ambient model
+    std::optional<double> boostPressure_Pa;    // gauge pressure above ambient
+    std::optional<double> turboSpeed_rad_s;    // turbocharger shaft speed
+    std::optional<double> wastegateDuty;       // 0..1
+    double knockRetard_deg = 0.0;              // ignition taken back by the knock control
     // Drivetrain (iteration 10):
     std::optional<int> gear;                // 0 = neutral, 1.. = forward gears
     std::optional<double> clutchEngagement; // 0 = open (pedal pressed) .. 1 = closed

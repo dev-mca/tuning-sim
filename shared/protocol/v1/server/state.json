@@ -22,6 +22,7 @@
     "launchSwitch": false,
     "launchActive": false,
     "sparkCut": false,
+    "iat_C": null,
     "boost_kPa": null,
     "turboSpeed_rpm": null,
     "wastegateDuty_pct": null,

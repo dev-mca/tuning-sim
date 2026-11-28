@@ -216,6 +216,7 @@ std::string ProtocolCodec::encodeState(const StateSnapshot& state) const {
                      {"launchSwitch", state.launchSwitch},
                      {"launchActive", state.launchActive},
                      {"sparkCut", state.sparkCut},
+                     {"iat_C", optionalNumber(state.intakeTemperature_K, units::kelvinToCelsius)},
                      {"boost_kPa", optionalNumber(state.boostPressure_Pa, units::paToKpa)},
                      {"turboSpeed_rpm", optionalNumber(state.turboSpeed_rad_s, units::radSToRpm)},
                      {"wastegateDuty_pct", optionalNumber(state.wastegateDuty, fractionToPercent)},
