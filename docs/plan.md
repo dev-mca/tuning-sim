@@ -234,6 +234,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 7 | Sound an simcore koppeln | P1 | Echtzeit-Threads | ✅ |
 | 7b | Pops & Bangs im Schub (vorgezogen aus 10) | P1 | – | ✅ |
 | 7c | 2-Step im Stand (vorgezogen aus 10) | P1 | – | ✅ |
+| 10a | Protokoll-Vertrag und vereinbarte State-Felder (Vorbereitung 8/10) | P2 | – | ✅ |
 | 8 | Turbo + Klopfen + Turbo-Sound | P2 | Regelungstechnik | ⬜ |
 | 9 | Kompressor/Supercharger | P2 | – | ⬜ |
 | 10 | Antriebsstrang, Rollenprüfstand, Launch/Flat Shift/Pops | P3 | – | ⬜ |
@@ -401,7 +402,9 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 
 ---
 
-## 11. Vorschlag nächste Welle (Iterationen 7c, 10, 8, 9) – nur Vorschlag, nicht umgesetzt
+## 11. Nächste Welle (Iterationen 7c, 10, 8, 9)
+
+**Stand 2026-11-28:** 7c fertig; Vorbereitung als Iteration 10a umgesetzt (Variante A + Stub-Felder, vom Nutzer dem Lead überlassen): Beispiele in `shared/protocol/v1/`, Vertragstests in core und ui, `state` mit `iat_C`, Turbo- und Antriebsfeldern als `null`. Der Typecheck fand dabei gleich eine Lücke (`iat_C` nur in der UI). Ursprünglicher Vorschlag:
 
 **Reihenfolge (vom Nutzer freigegeben, 2026-11-28):** 7c 2-Step → 10 Antriebsstrang → 8 Turbo → 9 Kompressor.
 

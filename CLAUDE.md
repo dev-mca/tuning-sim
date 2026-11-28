@@ -119,7 +119,8 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 
 - Letzte Arbeit: **Welle 1 (2026-11-28)** mit 5 parallelen Agents gemerged: Origin-Check + Achsen-Rundung (core), 0D-Prototyp (lab, Iteration 11 🟨), Tauri-Hülle `app/` (12 🟨), 3D-Kennfeld + .msq-Import (13 🟨). Details plan.md §8.
 - Iteration **7c – 2-Step im Stand ✅** (2026-11-28, ADR 0014).
-- Nächste Iteration: **Vorbereitung Protokoll-Vertragstest + Stub-Felder** (plan.md §11, Variante A, vom Nutzer dem Lead überlassen), danach 10 Antriebsstrang, dann 8 Turbo.
+- Iteration **10a – Protokoll-Vertrag ✅** (2026-11-28).
+- Nächste Iteration: **10 Antriebsstrang**, danach 8 Turbo.
 - System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
 - ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket, 0005 UI-Zustand/Rendering, 0006 Live-Verbindung/Tune-Dateien, 0007 Sound in simcore, 0008 Pops & Bangs, 0009 Tauri-Hülle, 0010 0D-Modell (Lab), 0011 Origin-Check, 0012 .msq-Import, 0013 3D-Kennfeld, 0014 2-Step
@@ -155,4 +156,6 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - 2026-11-22: Der Standard-Audioausgang des Nutzers ist HDMI (GA104). Kommt kein Ton, das Standardgerät in den KDE-Einstellungen prüfen.
 - 2026-11-28: Rust liegt in `~/.cargo/bin` (rustup, nicht im PATH). `cargo build` in `app/src-tauri` scheitert ohne gestagten Sidecar (`npm run stage-sidecar`). simcore nie per nacktem TCP-Connect prüfen (IXWebSocket loggt, SIGPIPE), immer echter Handshake.
 - 2026-11-28: Parallele Agents in Worktrees: eigenes `lab/.venv` je Worktree (das venv im Haupt-Checkout zeigt auf den Haupt-Baum), eigene Ports je Agent, feste ADR-Nummern vorab verteilen, `ui/package-lock.json` beim Merge mit `git checkout --ours` + `npm install` neu erzeugen. Worktrees liegen in `.claude/worktrees/` (nicht committen).
+- 2026-11-28: Protokolländerungen beginnen beim Beispiel in `shared/protocol/v1/` (Vertragstests in core und ui, `docs/interface.md` «Vertrag»). Im TS-Vertragstest steht `Required<EngineState>`, deshalb meldet der Typecheck fehlende Felder.
+- 2026-11-28: Blockiert ein Hook einen Bash-Befehl, läuft **nichts** davon, auch Dateiänderungen davor nicht. Danach prüfen, ob die Änderung wirklich drin ist.
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.
