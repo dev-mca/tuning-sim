@@ -215,3 +215,42 @@ TEST_CASE("state reports catalyst temperature and overrun fuelling") {
     CHECK(bus.lastState.catalystTemperature_K > 600.0);
     CHECK_FALSE(bus.lastState.overrunFueling);
 }
+
+TEST_CASE("launch settings are read, validated, applied and broadcast") {
+    FakeBus bus;
+    SimulationService service(test::referenceEngine(), bus, bus);
+    bus.push(GetLaunchSettings{}, "get");
+    runSteps(service, 1);
+    REQUIRE(bus.count<LaunchSettingsData>() == 1);
+    CHECK_FALSE(std::get<LaunchSettingsData>(bus.sent.back().payload).settings.enabled);
+
+    bus.push(SetLaunchSettings{{true, units::rpmToRadS(9000.0), 10.0}}, "bad");
+    runSteps(service, 1);
+    CHECK(bus.count<ErrorReply>() == 1);
+    CHECK_FALSE(service.simulation().ecu().tune().launch.enabled); // unchanged
+
+    bus.push(SetLaunchSettings{{true, units::rpmToRadS(4000.0), 10.0}}, "good");
+    runSteps(service, 1);
+    CHECK(service.simulation().ecu().tune().launch.enabled);
+    CHECK(bus.count<Ack>() == 1);
+    REQUIRE(bus.count<LaunchSettingsData>() == 2);
+    CHECK(bus.sent.back().clientId.empty()); // broadcast to every client
+}
+
+TEST_CASE("holding the launch switch at full pedal holds the launch speed") {
+    FakeBus bus;
+    SimulationService service(test::referenceEngine(), bus, bus);
+    bus.push(SetLaunchSettings{{true, units::rpmToRadS(4000.0), 10.0}}, "launch");
+    bus.push(SetLaunchSwitch{true}, "held");
+    bus.push(SetPedal{1.0}, "pedal");
+    runSteps(service, 3000);
+    CHECK(bus.lastState.launchSwitch);
+    CHECK(bus.lastState.launchActive);
+    CHECK(units::radSToRpm(bus.lastState.speed_rad_s) == doctest::Approx(4000.0).epsilon(0.05));
+
+    bus.push(SetLaunchSwitch{false}, "released");
+    runSteps(service, 2000);
+    CHECK_FALSE(bus.lastState.launchSwitch);
+    CHECK_FALSE(bus.lastState.launchActive);
+    CHECK(units::radSToRpm(bus.lastState.speed_rad_s) > 6000.0);
+}

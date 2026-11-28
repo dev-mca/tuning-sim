@@ -1,6 +1,7 @@
 // JSON protocol v1 (docs/interface.md): decoding, encoding, unit conversion at the edge.
 
 #include "adapters/protocol.hpp"
+#include "domain/common/units.hpp"
 #include "test_support.hpp"
 
 #include <doctest/doctest.h>
@@ -153,4 +154,34 @@ TEST_CASE("state carries catalyst temperature and overrun fuelling") {
     const json payload = json::parse(codec().encodeState(state))["payload"];
     CHECK(payload["catalyst_C"].get<double>() == doctest::Approx(600.0));
     CHECK(payload["overrunFueling"] == true);
+}
+
+TEST_CASE("launch settings use 1/min on the wire and are encoded back") {
+    const SetLaunchSettings set = decodeAs<SetLaunchSettings>(
+        R"({"v":1,"type":"setLaunchSettings","payload":{"enabled":true,"launch_rpm":4000,"retard_deg":10}})");
+    CHECK(set.settings.enabled);
+    CHECK(set.settings.launchSpeed_rad_s == doctest::Approx(units::rpmToRadS(4000.0)));
+    CHECK(set.settings.retard_deg == 10.0);
+    static_cast<void>(decodeAs<GetLaunchSettings>(R"({"v":1,"type":"getLaunchSettings"})"));
+
+    const json encoded = json::parse(
+        codec().encode({"c", "4", LaunchSettingsData{{true, units::rpmToRadS(4500.0), 12.0}}}));
+    CHECK(encoded["type"] == "launchSettings");
+    CHECK(encoded["id"] == "4");
+    CHECK(encoded["payload"]["enabled"] == true);
+    CHECK(encoded["payload"]["launch_rpm"].get<double>() == doctest::Approx(4500.0));
+    CHECK(encoded["payload"]["retard_deg"].get<double>() == doctest::Approx(12.0));
+}
+
+TEST_CASE("the launch switch is decoded and the state reports launch control") {
+    CHECK(decodeAs<SetLaunchSwitch>(R"({"v":1,"type":"setLaunchSwitch","payload":{"held":true}})")
+              .held);
+    StateSnapshot state;
+    state.launchSwitch = true;
+    state.launchActive = true;
+    state.sparkCut = true;
+    const json payload = json::parse(codec().encodeState(state))["payload"];
+    CHECK(payload["launchSwitch"] == true);
+    CHECK(payload["launchActive"] == true);
+    CHECK(payload["sparkCut"] == true);
 }
