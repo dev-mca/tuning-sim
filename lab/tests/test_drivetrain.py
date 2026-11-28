@@ -179,3 +179,36 @@ def test_roller_shows_less_power_at_the_wheels_than_the_engine_dyno(
     gear_ratio = i6.drivetrain.overall_ratio(4)
     speed_check = roller.vehicle_speed_m_s * gear_ratio / i6.drivetrain.wheel_radius_m
     assert speed_check == pytest.approx(roller.speed_rad_s, rel=1e-9)
+
+
+def test_full_brake_stops_the_car_from_60_kmh_in_about_two_seconds(
+    i6: EngineDefinition,
+) -> None:
+    car, _ = launched_car(i6)
+    states = run(car, 1.0, 1.0)
+    while kmh(states[-1]) < 60.0:
+        states.append(car.step(1.0))
+    car.drivetrain.set_clutch_pedal(True)  # declutch, then brake hard
+    car.drivetrain.set_brake(1.0)
+    stopping = run(car, 0.0, 4.0)
+    stop_step = next(i for i, state in enumerate(stopping) if kmh(state) == 0.0)
+    # research.md §8.5: about 0.9 g plus road load -> 60 km/h in about 1.9 s.
+    assert 1.5 < stop_step / STEPS_PER_SECOND < 2.3
+    assert all(kmh(state) == 0.0 for state in stopping[stop_step:])  # held, no creeping back
+
+
+def test_the_brake_holds_the_car_against_the_engine(i6: EngineDefinition) -> None:
+    car = CarSimulation(i6)
+    car.drivetrain.set_brake(1.0)
+    car.drivetrain.shift(1)
+    states = run(car, 0.3, 3.0)  # clutch up in 1st with some throttle, brake held
+    assert all(state.drivetrain.vehicle_speed_m_s == 0.0 for state in states)
+    assert states[-1].drivetrain.brake == 1.0
+
+
+def test_brake_input_is_clamped(i6: EngineDefinition) -> None:
+    car = CarSimulation(i6)
+    car.drivetrain.set_brake(2.0)
+    assert car.step(0.0).drivetrain.brake == 1.0
+    car.drivetrain.set_brake(-1.0)
+    assert car.step(0.0).drivetrain.brake == 0.0

@@ -119,8 +119,7 @@ std::optional<double> Drivetrain::integrate(double dt, double engineSpeed_rad_s)
         return std::nullopt;
     }
     const double driveForce = wheelForce(clutchTorque_Nm_);
-    const double acceleration =
-        (driveForce - roadLoad_N(parameters_, speed_m_s_)) / vehicleMass_kg_;
+    const double acceleration = (driveForce - resistance_N(driveForce)) / vehicleMass_kg_;
     speed_m_s_ = std::max(0.0, speed_m_s_ + dt * acceleration);
     if (clutchState_ != ClutchState::Slipping) {
         return std::nullopt;
@@ -142,7 +141,8 @@ DrivetrainState Drivetrain::state() const noexcept {
             speed_m_s_,
             clutchTorque_Nm_,
             force * parameters_.wheelRadius_m,
-            force};
+            force,
+            brake_};
 }
 
 double Drivetrain::inputSpeed_rad_s() const {
@@ -165,10 +165,23 @@ double Drivetrain::lockedClutchTorque(double engineTorque_Nm) const {
     const double efficiency = parameters_.efficiency;
     const double effectiveMass =
         vehicleMass_kg_ + engineInertia_kgm2_ * i * i * efficiency / (radius * radius);
-    const double acceleration =
-        (engineTorque_Nm * i * efficiency / radius - roadLoad_N(parameters_, speed_m_s_)) /
-        effectiveMass;
+    const double driveForce = engineTorque_Nm * i * efficiency / radius;
+    const double acceleration = (driveForce - resistance_N(driveForce)) / effectiveMass;
     return engineTorque_Nm - engineInertia_kgm2_ * i / radius * acceleration;
+}
+
+double Drivetrain::resistance_N(double driveForce_N) const {
+    // Road load plus brake (research.md §8.5). Moving, the brake takes its full force (tyre
+    // grip). Standing, it holds the car against what would push it forward, up to its holding
+    // force (brake torque on the driven wheels), so it never pulls backwards.
+    const double road = roadLoad_N(parameters_, speed_m_s_);
+    const double fullBrake =
+        brake_ * parameters_.vehicleMass_kg * parameters_.brakeMaxDeceleration_m_s2;
+    if (speed_m_s_ > 0.0) {
+        return road + fullBrake;
+    }
+    const double holding = fullBrake * parameters_.brakeHoldFactor;
+    return road + std::min(holding, std::max(driveForce_N - road, 0.0));
 }
 
 double Drivetrain::lock(double engineSpeed_rad_s) {
@@ -176,9 +189,12 @@ double Drivetrain::lock(double engineSpeed_rad_s) {
     const double i = ratio();
     const double radius = parameters_.wheelRadius_m;
     const double inputInertia = vehicleMass_kg_ * radius * radius / (i * i);
-    const double commonSpeed =
+    double commonSpeed =
         (engineInertia_kgm2_ * engineSpeed_rad_s + inputInertia * inputSpeed_rad_s()) /
         (engineInertia_kgm2_ + inputInertia);
+    if (speed_m_s_ <= 0.0 && brake_ > 0.0) {
+        commonSpeed = 0.0; // a braked standing car takes up the rest: the engine stalls
+    }
     clutchState_ = ClutchState::Locked;
     speed_m_s_ = commonSpeed * radius / i;
     return commonSpeed;

@@ -55,6 +55,8 @@ class DrivetrainState:
     """Sum of the driven wheels: T_clutch * i * eta (§8.1)."""
     wheel_force_n: float
     """Drive force at the tyres = what the roller dyno measures."""
+    brake: float
+    """Brake pedal 0..1."""
 
 
 def road_load_n(parameters: DrivetrainParameters, speed_m_s: float) -> float:
@@ -84,11 +86,16 @@ class Drivetrain:
         self._shift_elapsed_s = 0.0
         self._speed_m_s = 0.0
         self._clutch_torque = 0.0
+        self._brake = 0.0
 
     # --- driver inputs ---
 
     def set_clutch_pedal(self, pressed: bool) -> None:
         self._pedal_pressed = pressed
+
+    def set_brake(self, pedal: float) -> None:
+        """Brake pedal 0..1 (clamped)."""
+        self._brake = min(max(pedal, 0.0), 1.0)
 
     def shift(self, gear: int) -> bool:
         """Starts a shift to `gear` (0 = neutral); False if invalid or already shifting."""
@@ -193,7 +200,7 @@ class Drivetrain:
             self._speed_m_s = engine_speed_rad_s * self._p.wheel_radius_m / self._ratio()
             return None
         drive_force = self._wheel_force(self._clutch_torque)
-        acceleration = (drive_force - road_load_n(self._p, self._speed_m_s)) / self._vehicle_mass
+        acceleration = (drive_force - self._resistance_n(drive_force)) / self._vehicle_mass
         self._speed_m_s = max(0.0, self._speed_m_s + dt * acceleration)
         if self._state is not ClutchState.SLIPPING:
             return None
@@ -214,6 +221,7 @@ class Drivetrain:
             clutch_torque_nm=self._clutch_torque,
             wheel_torque_nm=wheel_force * self._p.wheel_radius_m,
             wheel_force_n=wheel_force,
+            brake=self._brake,
         )
 
     # --- helpers ---
@@ -242,10 +250,23 @@ class Drivetrain:
         effective_mass = self._vehicle_mass + self._engine_inertia * ratio * ratio * efficiency / (
             radius * radius
         )
-        acceleration = (
-            engine_torque_nm * ratio * efficiency / radius - road_load_n(self._p, self._speed_m_s)
-        ) / effective_mass
+        drive_force = engine_torque_nm * ratio * efficiency / radius
+        acceleration = (drive_force - self._resistance_n(drive_force)) / effective_mass
         return engine_torque_nm - self._engine_inertia * ratio / radius * acceleration
+
+    def _resistance_n(self, drive_force_n: float) -> float:
+        """Road load plus brake force against the drive force (research.md §8.5).
+
+        Moving, the brake takes its full force (tyre grip). Standing, it holds the car: it
+        takes what would otherwise push the car forward, up to its holding force (brake torque
+        on the driven wheels), so it never pulls backwards.
+        """
+        road = road_load_n(self._p, self._speed_m_s)
+        full_brake = self._brake * self._p.vehicle_mass_kg * self._p.brake_max_deceleration_m_s2
+        if self._speed_m_s > 0.0:
+            return road + full_brake
+        holding = full_brake * self._p.brake_hold_factor
+        return road + min(holding, max(drive_force_n - road, 0.0))
 
     def _lock(self, engine_speed_rad_s: float) -> float:
         """Locks the clutch at the momentum-conserving common speed; returns it for the crank."""
@@ -256,6 +277,8 @@ class Drivetrain:
         common_speed = (
             self._engine_inertia * engine_speed_rad_s + input_inertia * self._input_speed_rad_s()
         ) / (self._engine_inertia + input_inertia)
+        if self._speed_m_s <= 0.0 and self._brake > 0.0:
+            common_speed = 0.0  # a braked standing car takes up the rest: engine stalls
         self._state = ClutchState.LOCKED
         self._speed_m_s = common_speed * radius / ratio
         return common_speed

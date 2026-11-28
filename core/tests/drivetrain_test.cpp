@@ -181,3 +181,37 @@ TEST_CASE("the roller shows less power at the wheels than the engine dyno") {
     CHECK_THROWS_AS(static_cast<void>(runRoller(engine(), {0, 3000.0, 6800.0})),
                     std::invalid_argument);
 }
+
+TEST_CASE("full brake stops the car from 60 km/h in about two seconds and holds it") {
+    CarSimulation car = tunedCar();
+    launch(car);
+    CarState state = car.step(1.0);
+    while (units::msToKmh(state.drivetrain.vehicleSpeed_m_s) < 60.0) {
+        state = car.step(1.0);
+    }
+    car.drivetrain().setClutchPedal(true);
+    car.drivetrain().setBrake(1.0);
+    const std::vector<CarState> stopping = run(car, 0.0, 4.0);
+    const auto stopped = std::find_if(stopping.begin(), stopping.end(), [](const CarState& s) {
+        return s.drivetrain.vehicleSpeed_m_s == 0.0;
+    });
+    REQUIRE(stopped != stopping.end());
+    const double seconds = static_cast<double>(stopped - stopping.begin()) / kStepsPerSecond;
+    CHECK(seconds > 1.5);
+    CHECK(seconds < 2.3);
+    CHECK(std::all_of(stopped, stopping.end(),
+                      [](const CarState& s) { return s.drivetrain.vehicleSpeed_m_s == 0.0; }));
+}
+
+TEST_CASE("the brake holds the car against the engine and the pedal is clamped") {
+    CarSimulation car(engine());
+    car.drivetrain().setBrake(1.0);
+    static_cast<void>(car.drivetrain().shift(1));
+    for (const CarState& state : run(car, 0.3, 3.0)) {
+        CHECK(state.drivetrain.vehicleSpeed_m_s == 0.0);
+    }
+    car.drivetrain().setBrake(2.0);
+    CHECK(car.step(0.0).drivetrain.brake == 1.0);
+    car.drivetrain().setBrake(-1.0);
+    CHECK(car.step(0.0).drivetrain.brake == 0.0);
+}

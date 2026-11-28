@@ -92,11 +92,13 @@ struct DrivetrainParameters {
     double dragArea_m2 = 0.0;       // c_w * A
     double rollingResistance = 0.0; // c_r
     double clutchMaxTorque_Nm = 0.0;
-    double clutchReleaseTime_s = 1.0; // pedal up to a fully closed clutch
-    double shiftTime_s = 0.1;         // torque interruption; the gear changes at its end
-    double shiftEngageTime_s = 0.1;   // clutch closing after a shift
-    double launchMaxSpeed_m_s = 0.0;  // the clutch arms launch control only below this speed
-    double stallSpeed_rad_s = 0.0;    // below this the engine has stalled
+    double clutchReleaseTime_s = 1.0;       // pedal up to a fully closed clutch
+    double shiftTime_s = 0.1;               // torque interruption; the gear changes at its end
+    double shiftEngageTime_s = 0.1;         // clutch closing after a shift
+    double launchMaxSpeed_m_s = 0.0;        // the clutch arms launch control only below this speed
+    double stallSpeed_rad_s = 0.0;          // below this the engine has stalled
+    double brakeMaxDeceleration_m_s2 = 0.0; // full brake on the moving car (tyre grip, §8.5)
+    double brakeHoldFactor = 1.0;           // standing, the brake torque holds this many times more
 
     [[nodiscard]] int gearCount() const noexcept { return static_cast<int>(gearRatios.size()); }
     /// i = i_g i_f from engine to wheels (research.md §8.1); gear 1 = first gear.
