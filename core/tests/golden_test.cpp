@@ -134,3 +134,50 @@ TEST_CASE("overrun with a pops tune matches the Python golden file (research.md 
     }
     CHECK(row == golden.rows.size());
 }
+
+TEST_CASE("launch control (2-step) matches the Python golden file (research.md §3.4)") {
+    const Csv golden = readCsv(test::sharedDir() + "/golden/i6_30_na_launch.csv");
+    const std::vector<std::string> columns = {
+        "time_s",  "speed_rpm",        "throttle",       "launchActive",  "sparkCut",
+        "fuelCut", "ignition_degBTDC", "lateCombustion", "catalyst_degC", "engineTorque_Nm"};
+    REQUIRE(golden.header == columns);
+
+    // Same scenario as LAUNCH_* in lab/src/tuning_lab/golden.py.
+    const EngineDefinition& engine = test::referenceEngine().definition;
+    Tune tune = Tune::fromTables(engine.tables);
+    tune.launch = {true, units::rpmToRadS(4000.0), 10.0};
+    EngineSimulation simulation(engine, tune);
+    constexpr int kSteps = 5000;
+    constexpr int kSampleSteps = 50;
+    std::size_t row = 0;
+    for (int step = 0; step < kSteps; ++step) {
+        const double time_s = step * simulation.timeStep_s();
+        const bool held = time_s >= 0.5 && time_s < 4.0;
+        const bool throttleOpen = held || (time_s >= 4.0 && time_s < 4.3);
+        simulation.ecu().setLaunchSwitch(held);
+        const SimulationState state = simulation.step(throttleOpen ? 1.0 : 0.0, 0.0);
+        if ((step + 1) % kSampleSteps != 0) {
+            continue;
+        }
+        REQUIRE(row < golden.rows.size());
+        const std::vector<double> actual = {state.time_s,
+                                            units::radSToRpm(state.speed_rad_s),
+                                            state.throttle,
+                                            state.command.launchActive ? 1.0 : 0.0,
+                                            state.command.sparkCut ? 1.0 : 0.0,
+                                            state.command.fuelCut ? 1.0 : 0.0,
+                                            state.command.ignition_deg,
+                                            state.engine.lateCombustionFraction,
+                                            units::kelvinToCelsius(state.catalystTemperature_K),
+                                            state.engine.brakeTorque_Nm};
+        for (std::size_t c = 0; c < actual.size(); ++c) {
+            const double expected = golden.rows[row][c];
+            const double tolerance = kAbsoluteTolerance + kRelativeTolerance * std::abs(expected);
+            CAPTURE(row);
+            CAPTURE(columns[c]);
+            CHECK(std::abs(actual[c] - expected) <= tolerance);
+        }
+        ++row;
+    }
+    CHECK(row == golden.rows.size());
+}
