@@ -11,6 +11,7 @@ import { DynoPanel } from './ui/dyno/DynoPanel.tsx';
 import { GaugeCluster } from './ui/gauges/GaugeCluster.tsx';
 import { ConnectionBanner } from './ui/layout/ConnectionBanner.tsx';
 import { Toast } from './ui/layout/Toast.tsx';
+import { Map3dPanel } from './ui/map3d/Map3dPanel.tsx';
 import { OverrunPanel } from './ui/overrun/OverrunPanel.tsx';
 import { TablePanel } from './ui/table/TablePanel.tsx';
 
@@ -44,7 +45,10 @@ export function App() {
   );
 }
 
-/** Layout from plan.md §7: gauges on top, table editor left, dyno right, controls at the bottom. */
+/**
+ * Layout from plan.md §7: gauges on top, table editor left, dyno and 3D map right, controls at
+ * the bottom.
+ */
 function Cockpit({ onSourceChange }: { onSourceChange: (kind: SourceKind) => void }) {
   const { hello } = useSnapshot();
   return (
@@ -73,7 +77,10 @@ function Cockpit({ onSourceChange }: { onSourceChange: (kind: SourceKind) => voi
           <TablePanel />
           <OverrunPanel />
         </div>
-        <DynoPanel />
+        <div className="flex min-w-0 flex-col gap-4">
+          <DynoPanel />
+          <Map3dPanel />
+        </div>
       </main>
       <ControlBar onSourceChange={onSourceChange} />
       <Toast />
