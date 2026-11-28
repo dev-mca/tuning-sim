@@ -1,5 +1,6 @@
 import { type ChangeEvent, useRef } from 'react';
 
+import { importMsq } from '../../domain/msq/importMsq.ts';
 import { tuneFileName } from '../../domain/tuneFile.ts';
 import { useSnapshot, useStore } from '../../state/StoreContext.ts';
 import { Button } from './Button.tsx';
@@ -12,6 +13,7 @@ export function TuneMenu() {
   const store = useStore();
   const { tables, hello } = useSnapshot();
   const fileInput = useRef<HTMLInputElement>(null);
+  const msqInput = useRef<HTMLInputElement>(null);
   const ready = hello !== null && tables.size > 0;
 
   const save = (): void => {
@@ -51,6 +53,27 @@ export function TuneMenu() {
     }
   };
 
+  /** TunerStudio .msq (ADR 0012): converted to a tune, then loaded like a tune file. */
+  const loadMsq = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file === undefined || hello === null) {
+      return;
+    }
+    try {
+      const { tune, warnings } = importMsq(await file.text(), hello.engine.id, tables, new Date());
+      const changed = store.importTune(JSON.stringify(tune));
+      const notes = warnings.length === 0 ? '' : ` · ${warnings.join(' · ')}`;
+      store.notify(
+        'info',
+        `${file.name}: ${String(changed)} cells changed (Ctrl+Z undoes it)${notes}`,
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      store.notify('error', `${file.name}: ${reason}`);
+    }
+  };
+
   return (
     <div className="flex items-center gap-1.5">
       <Button disabled={!ready} onClick={save} title="Download the editable tables as JSON">
@@ -62,6 +85,13 @@ export function TuneMenu() {
         title="Load a tune file saved before"
       >
         Load tune
+      </Button>
+      <Button
+        disabled={!ready}
+        onClick={() => msqInput.current?.click()}
+        title="Import VE, ignition and AFR/lambda tables from a TunerStudio .msq file"
+      >
+        Import .msq…
       </Button>
       <Button
         disabled={!ready}
@@ -79,6 +109,15 @@ export function TuneMenu() {
         className="hidden"
         onChange={(event) => {
           void load(event);
+        }}
+      />
+      <input
+        ref={msqInput}
+        type="file"
+        accept=".msq"
+        className="hidden"
+        onChange={(event) => {
+          void loadMsq(event);
         }}
       />
     </div>
