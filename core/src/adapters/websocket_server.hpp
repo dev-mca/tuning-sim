@@ -3,6 +3,7 @@
 // WebSocket adapter (docs/adr/0004-websocket-library.md, protocol in docs/interface.md).
 // Listens on 127.0.0.1 only. Incoming text is decoded and submitted to the MessageBus;
 // a publisher thread sends the latest state at 60 Hz and forwards replies and events.
+// Browser clients from foreign web pages are refused by their Origin (adapters/origin_policy).
 
 #include "adapters/message_bus.hpp"
 #include "adapters/protocol.hpp"
@@ -11,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 
@@ -39,7 +41,9 @@ public:
     [[nodiscard]] std::size_t clientCount();
 
 private:
-    void onOpen(const std::string& clientId, ix::WebSocket& socket);
+    void onOpen(const std::string& clientId, ix::WebSocket& socket,
+                const std::optional<std::string>& origin);
+    [[nodiscard]] bool isRegistered(const std::string& clientId);
     void onClose(const std::string& clientId);
     void onText(const std::string& clientId, ix::WebSocket& socket, const std::string& text);
     void publishLoop();

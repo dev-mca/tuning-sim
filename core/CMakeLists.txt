@@ -47,6 +47,7 @@ add_library(simcore_lib STATIC
   src/domain/engine/engine_model.cpp
   src/domain/engine/engine_simulation.cpp
   src/domain/dyno/dyno.cpp
+  src/adapters/origin_policy.cpp
   src/adapters/table_units.cpp
   src/adapters/json_file_repository.cpp
   src/adapters/protocol.cpp
