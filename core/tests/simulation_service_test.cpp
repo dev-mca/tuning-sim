@@ -310,3 +310,12 @@ TEST_CASE("an engine dyno sweep takes the car out of gear") {
     runSteps(service, 1);
     CHECK(service.car().drivetrain().gear() == 0);
 }
+
+TEST_CASE("the brake pedal is clamped, applied and reported") {
+    FakeBus bus;
+    SimulationService service(test::referenceEngine(), bus, bus);
+    bus.push(SetBrake{0.5}, "brake");
+    runSteps(service, 1);
+    CHECK(bus.lastState.brake == 0.5);
+    CHECK(service.car().drivetrain().state().brake == 0.5);
+}

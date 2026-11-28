@@ -145,6 +145,9 @@ Command decodeCommand(const std::string& type, const json& payload,
     if (type == "shift") {
         return Shift{payload.at("gear").get<int>()};
     }
+    if (type == "setBrake") {
+        return SetBrake{std::clamp(payload.at("value").get<double>(), 0.0, 1.0)};
+    }
     if (type == "setClutch") {
         return SetClutch{payload.at("pressed").get<bool>()};
     }
@@ -269,7 +272,8 @@ std::string ProtocolCodec::encodeState(const StateSnapshot& state) const {
                      {"vehicleSpeed_kmh", optionalNumber(state.vehicleSpeed_m_s, units::msToKmh)},
                      {"wheelTorque_Nm", optionalNumber(state.wheelTorque_Nm, unchanged)},
                      {"clutchLocked", state.clutchLocked},
-                     {"shifting", state.shifting}});
+                     {"shifting", state.shifting},
+                     {"brake", state.brake}});
 }
 
 std::string ProtocolCodec::encodeError(const std::string& requestId,

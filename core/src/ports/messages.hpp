@@ -65,14 +65,19 @@ struct Shift {
 struct SetClutch {
     bool pressed;
 };
+/// The brake pedal 0..1 (a live input like the pedal).
+struct SetBrake {
+    double value;
+};
 /// Roller dyno run in one gear (research.md §8.4); stopSweep ends it early.
 struct StartRollerRun {
     RollerParameters parameters;
 };
 
-using Command = std::variant<SetPedal, StartSweep, StopSweep, GetTable, SetTableCells, SetAudio,
-                             GetOverrunSettings, SetOverrunSettings, GetLaunchSettings,
-                             SetLaunchSettings, SetLaunchSwitch, Shift, SetClutch, StartRollerRun>;
+using Command =
+    std::variant<SetPedal, StartSweep, StopSweep, GetTable, SetTableCells, SetAudio,
+                 GetOverrunSettings, SetOverrunSettings, GetLaunchSettings, SetLaunchSettings,
+                 SetLaunchSwitch, Shift, SetClutch, StartRollerRun, SetBrake>;
 
 struct IncomingCommand {
     std::string clientId;
@@ -161,6 +166,7 @@ struct StateSnapshot {
     std::optional<double> wheelTorque_Nm; // sum of both driven wheels
     bool clutchLocked = false;            // engine and car turn together
     bool shifting = false;                // torque interruption of a shift
+    double brake = 0.0;                   // brake pedal 0..1
 };
 
 } // namespace simcore
