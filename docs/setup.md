@@ -68,6 +68,10 @@ Exakte UI-Versionen stehen in `ui/package-lock.json`.
 | tailwindcss, @tailwindcss/vite | 4.3.5 | MIT | Tailwind v4: Konfiguration per `@theme` in CSS statt `tailwind.config.js` |
 | @fontsource-variable/inter, @fontsource-variable/jetbrains-mono | 5.3.0 | OFL-1.1 | Laufzeit, Schriften gebündelt (vom Nutzer freigegeben, 2026-11-19) |
 | uplot | 1.6.32 | MIT | Laufzeit, Dyno-Graphen (ab Iteration 5) |
+| three | 0.187.0 | MIT | Laufzeit, 3D-Kennfeld (Iteration 13a), als eigener Chunk nachgeladen |
+| @react-three/fiber | 9.8.2 | MIT | Laufzeit, React-Renderer für three; Peer react `>=19 <19.4` beachten, bevor React gehoben wird |
+| @types/three | 0.187.0 | MIT | Typen |
+| jsdom | 31.0.1 | MIT | nur Tests: `DOMParser` für den .msq-Import (`// @vitest-environment jsdom`), braucht Node ≥ 22.22.2 |
 | vitest | 5.1.1 | MIT | Tests (`npm test`), ab Iteration 5. `npm install -D vitest` scheiterte mit npm 10.9.9 («Cannot read properties of null (reading 'edgesOut')»); Workaround: Eintrag per `npm pkg set` und danach `npm install` |
 | eslint | 10.15.0 | MIT | statt Oxlint (create-vite-Standard), wie in plan.md festgelegt |
 | typescript-eslint | 8.73.0 | MIT | `strictTypeChecked` + `stylisticTypeChecked` |

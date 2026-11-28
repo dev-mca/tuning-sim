@@ -102,20 +102,30 @@ npm test                        # Vitest (Logik, Fake-Quelle, Store)
 npm run test:e2e                # End-to-End gegen laufendes simcore (vorher ./build/debug/core/simcore --no-audio)
 npm run build                   # Typecheck + Produktions-Build nach dist/
 npm run lint && npm run format  # ESLint + Prettier
+
+# Desktop-App (aus app/; PATH="$HOME/.cargo/bin:$PATH", vorher Release-Build von simcore)
+npm ci && npm run dev           # Vite :5180 + Fenster; TUNING_SIM_PORT=47801 TUNING_SIM_NO_AUDIO=1 optional
+npm run build                   # RPM in src-tauri/target/release/bundle/rpm/
+npm run stage-sidecar && (cd src-tauri && cargo test && cargo clippy --all-targets -- -D warnings && cargo fmt --check)
+
+# 0D-Modell (aus lab/)
+.venv/bin/python -m tuning_lab.zero_d.report                 # 0D vs MVM, Plots -> lab/output/zero_d/
 ```
 
 CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` alle drei Teile aus (inkl. Format-Checks). Vor dem Push lokal dieselben Befehle laufen lassen.
 
 ## Aktueller Stand
 
-- Iteration: **7b – Pops & Bangs im Schub ✅ abgeschlossen** (2026-11-22, vorgezogen aus 10, ADR 0008)
-- Nächste Iteration: **8 – Turbo** laut Plan; Vorschlag an den Nutzer: Antriebsstrang (10) vorziehen, weil frei drehender Motor ohne Last langweilig ist. Nutzer entscheidet.
+- Letzte Arbeit: **Welle 1 (2026-11-28)** mit 5 parallelen Agents gemerged: Origin-Check + Achsen-Rundung (core), 0D-Prototyp (lab, Iteration 11 🟨), Tauri-Hülle `app/` (12 🟨), 3D-Kennfeld + .msq-Import (13 🟨). Details plan.md §8.
+- Nächste Iteration: **7c – 2-Step im Stand**, danach 10 Antriebsstrang, dann 8 Turbo (vom Nutzer freigegeben). Vorschlag zur Entkopplung des Protokolls: plan.md §11.
 - System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
-- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket, 0005 UI-Zustand/Rendering, 0006 Live-Verbindung/Tune-Dateien, 0007 Sound in simcore, 0008 Pops & Bangs
+- ADRs: 0001 Architektur, 0002 doctest, 0003 Sound-Ansatz (Impulsmodell + Wellenleiter), 0004 IXWebSocket, 0005 UI-Zustand/Rendering, 0006 Live-Verbindung/Tune-Dateien, 0007 Sound in simcore, 0008 Pops & Bangs, 0009 Tauri-Hülle, 0010 0D-Modell (Lab), 0011 Origin-Check, 0012 .msq-Import, 0013 3D-Kennfeld
 - simcore (`core/src/`): `domain/` (Table1D/2D, Saugrohr, MVM inkl. Nachverbrennung, ECU mit Begrenzer + Schubabschaltung + Schub-Einstellungen, Kat-Temperatur, Dyno/SweepRun; bitgenau wie lab, Golden Files Sweep + Overrun), `acoustic/` + `dsp/` (Bibliothek `simcore_acoustic`: Pulse, Wellenleiter, Nachverbrennungs-Knaller, `AcousticParams` → `SoundTarget`), `ports/` (Interfaces inkl. `IAcousticSink`), `adapters/` (JSON-Repository, Protokoll-Codec, MessageBus, WebSocket-Server, CSV, WAV, miniaudio `AudioOutput`), `app/` (SimulationService, RealtimeRunner, `SoundRenderer`, `engine_acoustics`, `sound_sweep`, CLI, main), `concurrency/` (SPSC-Queue, Triple Buffer). Protokoll v1: `docs/interface.md`.
 - UI-Cockpit (`ui/src/`, Übersicht in `ui/README.md`): Port `sim/SimSource.ts`, `sim/fake/FakeSimSource` (Protokoll v1, Daten aus `shared/`), `state/simStore.ts`, Gauges (SVG), Tabelleneditor (Canvas), Dyno (uPlot). `App.tsx` wählt die Quelle (Live = `sim/live/WebSocketSimSource`, Fake), Tunes als JSON in der UI (`domain/tuneFile.ts`).
 - Lab (Referenz für den C++-Port in Iteration 4): MVM, ECU, Dyno in `lab/src/tuning_lab/` (Übersicht in `lab/README.md`); Referenzmotor `shared/engines/i6_30_na.json`, Tabellen `shared/tables/i6_30_na/`, Golden File `shared/golden/i6_30_na_sweep.csv`. Ergebnis Serie: 304 Nm, 196 kW, bmep 12,8 bar, Leerlauf 765/min bei 30 kPa.
+- Desktop-App `app/` (Tauri 2, ADR 0009): Rust-Hülle startet simcore als Sidecar, lädt `ui/`; Setup in `docs/setup.md`.
+- 0D-Prototyp `lab/src/tuning_lab/zero_d/` (ADR 0010): nur Lab, ändert weder MVM noch Golden Files.
 - Sound-Spike `core/spikes/sound_spike/` (README dort): nur noch interaktives Vergleichs-Frontend (I4/I6/V8), nutzt `simcore_acoustic`.
 
 ## Learnings
@@ -141,4 +151,6 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - 2026-11-22: Nach `git stash` zum Prüfen eines Zwischen-Commits neu bauen, sonst laufen veraltete Binaries (z. B. «unknown option»).
 - 2026-11-22: Der Nutzer hat oft eigene `simcore`/`npm run dev` laufen (Ports 47800/5173). Für eigene Tests andere Ports nehmen (`--port 47801`, `VITE_SIMCORE_URL=ws://127.0.0.1:47801 npx vite --port 5174`), nie seine Prozesse beenden.
 - 2026-11-22: Der Standard-Audioausgang des Nutzers ist HDMI (GA104). Kommt kein Ton, das Standardgerät in den KDE-Einstellungen prüfen.
+- 2026-11-28: Rust liegt in `~/.cargo/bin` (rustup, nicht im PATH). `cargo build` in `app/src-tauri` scheitert ohne gestagten Sidecar (`npm run stage-sidecar`). simcore nie per nacktem TCP-Connect prüfen (IXWebSocket loggt, SIGPIPE), immer echter Handshake.
+- 2026-11-28: Parallele Agents in Worktrees: eigenes `lab/.venv` je Worktree (das venv im Haupt-Checkout zeigt auf den Haupt-Baum), eigene Ports je Agent, feste ADR-Nummern vorab verteilen, `ui/package-lock.json` beim Merge mit `git checkout --ours` + `npm install` neu erzeugen. Worktrees liegen in `.claude/worktrees/` (nicht committen).
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.

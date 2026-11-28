@@ -1,6 +1,7 @@
 # ADR 0010 – Zylinderaufgelöstes 0D-Modell (Lab-Prototyp)
 
-- Status: vorgeschlagen (Proposed)
+- Status: angenommen (2026-11-28, vorher vorgeschlagen)
+- Nachtrag beim Merge: Als Prototyp im Lab. Entscheide zu den offenen Fragen: Woschni-Verbrennungsterm bleibt optional (Standard wie research.md §7.3); Ventildaten bleiben Annahmen im Modul, bis der C++-Port kommt; die MVM-VE-Tabelle und das Golden File bleiben unverändert. Gasdynamik (§7.6) ist der nächste Schritt für Iteration 11.
 - Datum: 2026-11-28
 
 ## Kontext

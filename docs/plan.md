@@ -233,12 +233,13 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 6 | UI ↔ simcore live | P2 | Integration | ✅ |
 | 7 | Sound an simcore koppeln | P1 | Echtzeit-Threads | ✅ |
 | 7b | Pops & Bangs im Schub (vorgezogen aus 10) | P1 | – | ✅ |
+| 7c | 2-Step im Stand (vorgezogen aus 10) | P1 | – | ⬜ |
 | 8 | Turbo + Klopfen + Turbo-Sound | P2 | Regelungstechnik | ⬜ |
 | 9 | Kompressor/Supercharger | P2 | – | ⬜ |
 | 10 | Antriebsstrang, Rollenprüfstand, Launch/Flat Shift/Pops | P3 | – | ⬜ |
-| 11 | Zylinderaufgelöstes 0D-Modell (Sound v2) | P1 | Thermodynamik | ⬜ |
-| 12 | Tauri-Desktop-App | P3 | Tauri/Rust-Basis | ⬜ |
-| 13 | 3D-Kennfeld, 3D-Auto, .msq-Import, Presets | P4 | three.js | ⬜ |
+| 11 | Zylinderaufgelöstes 0D-Modell (Sound v2) | P1 | Thermodynamik | 🟨 |
+| 12 | Tauri-Desktop-App | P3 | Tauri/Rust-Basis | 🟨 |
+| 13 | 3D-Kennfeld, 3D-Auto, .msq-Import, Presets | P4 | three.js | 🟨 |
 
 ### Iteration 0 – Repo-Bootstrap
 **Ziel:** Repo mit Struktur und Dokumenten existiert lokal und auf GitHub, CLion kann das Root öffnen.
@@ -316,6 +317,11 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 **Abnahme:** Serie still im Schub; Schubabschaltung aus → Blubbern; Pops-Tune knallt, warmer Kat knallt mehr; Remap hörbar.
 **Umgesetzt (2026-11-22):** ADR 0008. Neues Golden File `i6_30_na_overrun.csv` (C++ bitgenau, Vollgas-Golden unverändert). `getOverrunSettings`/`setOverrunSettings`, `state.catalyst_C`/`overrunFueling`. `simcore --sound-blips out.wav [--no-overrun-cut --overrun-retard 35 --overrun-enrichment 0.1]`. Gemessen: Pops-Tune im Schub ~10 dB lauter als Serie mit einzelnen Bangs, zweiter Schub (heisserer Kat) lauter als der erste. 111 C++-, 71 Lab-, 160 UI-Tests.
 
+### Iteration 7c – 2-Step im Stand (vorgezogen aus Iteration 10, Wunsch des Nutzers)
+- Launch Control ohne Getriebe: zweiter, tiefer Drehzahlbegrenzer (z. B. 4000/min) bei Vollgas im Stand, mit Spätzündung und Zündunterbrechung (Technik aus 7b), Einstellungen im Tune.
+- Zuerst Lab, Golden File, dann C++; Schalter und Einstellungen in der UI.
+**Abnahme:** Vollgas mit aktivem 2-Step hält die Drehzahl am Launch-Limit und knallt hörbar; aus → normaler Begrenzer.
+
 ### Iteration 8 – Turbo, Klopfen, Turbo-Sound
 - Verdichter-/Turbinenmodell, Wellendynamik, Wastegate (Open Loop + PID auf `boostTarget`), Ladeluftkühler, Abgasgegendruck.
 - Klopfmodell (Livengood-Wu mit Douaud-Eyzat) und Klopfregelung (Zündrücknahme).
@@ -341,13 +347,16 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Optional 1D-Auspuff. Schritt ≤ 2° KW bei Drehzahlgrenze.
 - Vergleich MVM vs. 0D (Drehmoment) im Lab.
 **Abnahme:** Krümmerlänge verändert hörbar Klang und messbar die Drehmomentkurve.
+**Teilweise umgesetzt (2026-11-28, Welle 1, ADR 0010):** Python-Prototyp `lab/src/tuning_lab/zero_d/` (RK4 über Kurbelwinkel, Wiebe, Woschni, Ventilströmung, Konstantdruck-Ränder), Vergleich mit dem MVM (`python -m tuning_lab.zero_d.report`): Volllast 276 Nm statt 304 Nm, ab 5000/min −20 %, weil ohne Gasdynamik keine Schwingrohraufladung. 58 neue Lab-Tests. Offen: Gasdynamik (§7.6, nötig für die Abnahme), Ventildaten in der Motordatei, C++-Port, Kopplung an den Sound.
 
 ### Iteration 12 – Tauri-Desktop-App
 - Tauri v2, simcore als Sidecar (`bundle.externalBin`), sauberes Starten/Beenden.
 **Abnahme:** installierbares Paket für mein OS.
+**Weitgehend umgesetzt (2026-11-28, Welle 1, ADR 0009):** `app/` mit Tauri 2.12, simcore als Sidecar (Start, WebSocket-Handshake abwarten, SIGTERM beim Beenden, Parent-Death-Signal), RPM per `npm run build`. 21 Rust-Tests. Offen: Fenster normal schliessen und RPM-Installation vom Nutzer prüfen; CI-Job für `app/`.
 
 ### Iteration 13 – Extras
 - 3D-Kennfeld (react-three-fiber), einfaches 3D-Auto, .msq-Import, weitere Presets.
+**Teilweise umgesetzt (2026-11-28, Welle 1):** 3D-Kennfeld nur zur Anzeige (ADR 0013, `ui/src/ui/map3d/`) und .msq-Import im Tune-Menü (ADR 0012, `ui/src/domain/msq/`). 54 neue UI-Tests (214). Offen: 3D-Auto, weitere Presets, Bearbeiten in 3D.
 
 ---
 
@@ -374,12 +383,35 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Auto-Tune der VE-Tabelle aus simulierten Lambda-Messungen
 - WebAssembly-Web-Demo
 - simcore liefert den Basis-Tune (aus `shared/tables`) mit, damit «Original» in der UI nicht vom Stand beim Verbinden abhängt (ADR 0006)
-- WebSocket-Server in simcore: `Origin`-Header prüfen (nur UI/Tauri zulassen), damit fremde Webseiten im Browser simcore nicht steuern können (ADR 0006)
 - Audio-Ausgabegerät in der UI wählbar machen (simcore spielt auf dem System-Standardgerät, ADR 0007)
 - Ansaug- und Mechanikgeräusch (research.md §6.5) sowie gemessene/entworfene Schalldämpfer-IR (§6.4)
 - Abgastemperatur-Modell (research.md §2.10) im Leerlauf und bei sehr später Zündung zu hoch (~1000–1400 °C statt 400–900 °C): η_cool lastabhängig machen; ändert das Golden File (ADR 0008)
 - Kaltstart: Kat startet kalt, ECU hebt den Leerlauf an und zündet spät, bis der Kat warm ist (Nutzer-Idee, Physik in research.md §2.10a vorhanden)
-- Tabellen-Achsen in simcore auf z. B. 6 Dezimalen runden (rad/s → 1/min erzeugt 1100,0000000000002)
 - Realistisches Abgassystem implementieren (von Krümmer bis Endtopf alle Komponenten)
 - Neue Werte wie Katalysatortemperatur (Motor dreht beim Kaltstart etwas höher beim idle, um den Kat schnell warm zu bekommen, darum hört sich das auto cooler an)
 - Schubabschaltung abstellen und dann sollte es beim warmen Kat knallen, burblen usw. 
+- Erledigt in Welle 1 (2026-11-28): Origin-Check im WebSocket-Server (ADR 0011), Achsen auf 6 Dezimalen gerundet
+- Achsen-Rundung nach Rolle statt nach Einheit (`table_units::axisFromSi`, Aufruf in `protocol.cpp`)
+- 3D-Ansicht: gleiche Tabellenauswahl wie der Editor (Auswahl aus `TablePanel` heben), Bearbeiten in 3D, Panel nur auf Knopfdruck
+- .msq: mit echter TunerStudio-Datei prüfen (Zeilenreihenfolge), stoich aus der Datei statt 14,7
+- Tauri: simcore-Adresse zur Laufzeit statt beim Build, Sidecar umbenennen (`/usr/bin/simcore`), CI-Job für `app/`, AppImage, Lizenzliste per `cargo about`
+- 0D: Ventildaten (`valves`) in die Motordatei, Woschni-Verbrennungsterm, Brenndauer-Tabelle
+- `core/tests/CMakeLists.txt` nennt `json_repository_test.cpp` doppelt
+
+---
+
+## 11. Vorschlag nächste Welle (Iterationen 7c, 10, 8, 9) – nur Vorschlag, nicht umgesetzt
+
+**Reihenfolge (vom Nutzer freigegeben, 2026-11-28):** 7c 2-Step → 10 Antriebsstrang → 8 Turbo → 9 Kompressor.
+
+**Problem:** Jede dieser Iterationen ändert dieselben Stellen: `StateSnapshot` und Befehle (`ports/messages.hpp`, `adapters/protocol.cpp`), die TS-Typen (`ui/src/protocol/messages.ts`, `parse.ts`), `docs/interface.md`, `engine_definition`, `ecu.cpp`, `simulation_service.cpp` und die Golden Files. Heute ist das Protokoll dreimal von Hand gepflegt.
+
+**Vorschlag A – Vertragstest mit gemeinsamen Beispielen (empfohlen, keine neue Abhängigkeit):**
+`shared/protocol/v1/examples/*.json` mit einem Beispiel je Nachricht (`state`, `hello`, `table`, alle Befehle). Ein C++-Test decodiert jedes Beispiel bzw. encodiert das passende Struct und vergleicht; ein Vitest-Test parst dieselben Dateien mit `parse.ts`. Ändert jemand eine Seite allein, wird ein Test rot. `interface.md` verweist auf die Beispiele.
+
+**Vorschlag B – JSON Schema als Quelle:** `shared/protocol/v1/*.schema.json`, TS-Typen generiert (z. B. json-schema-to-typescript), C++ prüft gegen das Schema im Test. Stärker, aber Codegen und neue Werkzeuge. Erst sinnvoll, wenn A nicht reicht.
+
+**Stub-Felder vorab vereinbaren:** In einer kleinen Vorbereitungs-Iteration kommen die neuen `state`-Felder als `null` bzw. Standardwert ins Protokoll (v1 erlaubt neue Felder): `boost_kPa`, `turboSpeed_rpm`, `wastegateDuty`, `knockRetard_deg`, `gear`, `clutch`, `vehicleSpeed_kmh`, `wheelTorque_Nm`, dazu leere Motordatei-Blöcke `boost` und `drivetrain`. Danach gehören 8 die Turbo-Felder und `domain/boost/`, 10 die Antriebs-Felder und `domain/drivetrain/`.
+
+**Was dann parallel geht und was nicht:** Mit A und den Stubs könnten 8 und 10 in getrennten Branches laufen. Sequenziell bleiben: Änderungen an `ecu.cpp` und `simulation_service.cpp` (Merge-Konflikte erwartet, aber klein) und vor allem die **Golden Files**: Beide Iterationen ändern das Vollgas-Golden. Lab → Golden → C++ muss nach jedem Merge neu erzeugt und bitgenau geprüft werden. Empfehlung: 7c allein, dann Vorbereitung (A + Stubs), dann 10 und 8 parallel mit getrennten Golden Files (`*_drivetrain.csv`, `*_turbo.csv`) und einem gemeinsamen Abgleich des Vollgas-Goldens am Schluss.
+

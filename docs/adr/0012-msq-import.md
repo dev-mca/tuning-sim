@@ -1,6 +1,7 @@
 # ADR 0012 – Import von TunerStudio-.msq-Dateien
 
-- Status: vorgeschlagen
+- Status: angenommen (2026-11-28, vorher vorgeschlagen)
+- Nachtrag beim Merge: Die vorgeschlagenen Standardwerte bleiben (eigene Achsen + Umrechnung, stoich 14,7 mit Warnung, unbekannte Einheiten werden abgelehnt). Zeilenreihenfolge mit einer echten TunerStudio-Datei prüfen.
 - Datum: 2026-11-28
 
 ## Kontext

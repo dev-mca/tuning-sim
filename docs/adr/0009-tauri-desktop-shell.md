@@ -1,6 +1,7 @@
 # ADR 0009 – Tauri-Desktop-Hülle mit simcore als Sidecar
 
-- Status: vorgeschlagen (Proposed)
+- Status: angenommen (2026-11-28, vorher vorgeschlagen)
+- Nachtrag beim Merge: Offene Punkte (Port zur Laufzeit, Name des Sidecars, CI-Job, AppImage) stehen im Backlog von plan.md.
 - Datum: 2026-11-28
 
 ## Kontext

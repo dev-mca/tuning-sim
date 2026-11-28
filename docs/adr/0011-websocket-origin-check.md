@@ -1,6 +1,7 @@
 # ADR 0011 – Origin-Prüfung im WebSocket-Server
 
-- Status: vorgeschlagen
+- Status: angenommen (2026-11-28, vorher vorgeschlagen)
+- Nachtrag beim Merge: Beliebiger localhost-Port bleibt erlaubt (Vite weicht auf 5174 ff. aus).
 - Datum: 2026-11-28
 
 ## Kontext

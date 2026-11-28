@@ -105,6 +105,40 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
+### three.js 0.187.0
+- Source: https://github.com/mrdoob/three.js
+- Licence: MIT
+- Used in: `ui/`, 3D table view (lazy chunk bundled into `ui/dist`)
+- Integration: npm
+
+Copyright © 2010-2026 three.js authors
+
+### @react-three/fiber 9.8.2
+- Source: https://github.com/pmndrs/react-three-fiber
+- Licence: MIT
+- Used in: `ui/`, React renderer for three.js in the 3D table view (with its MIT/BSD-3-Clause
+  dependencies zustand, its-fine, suspend-react, react-use-measure, scheduler, buffer, ieee754)
+- Integration: npm
+
+Copyright (c) 2019-2025 Poimandres
+
+### Tauri 2.12.7 (tauri, tauri-build 2.7.6, tauri-plugin-dialog 2.8.4)
+- Source: https://github.com/tauri-apps/tauri
+- Licence: MIT OR Apache-2.0 (used under MIT)
+- Used in: `app/`, desktop shell around the UI with simcore as sidecar
+- Integration: Cargo (`app/src-tauri/Cargo.lock`); the shell links about 430 transitive crates,
+  a complete list can be generated with `cargo about` or `cargo-license` (backlog)
+
+Copyright (c) 2017-2026 Tauri Programme within The Commons Conservancy
+
+### libc 0.2.191
+- Source: https://github.com/rust-lang/libc
+- Licence: MIT OR Apache-2.0 (used under MIT)
+- Used in: `app/`, SIGTERM and parent-death signal for the simcore sidecar
+- Integration: Cargo
+
+Copyright (c) The Rust Project Developers
+
 ## Used in tests only
 
 ### doctest 2.5.3

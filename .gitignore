@@ -33,3 +33,6 @@ Thumbs.db
 
 # --- Lab output (plots, regenerate with python -m tuning_lab.report) ---
 lab/output/
+
+# Agent worktrees (Claude Code)
+.claude/worktrees/
