@@ -44,6 +44,7 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
 | `setLaunchSwitch` | `{ "held": true }` (Launch-Taste, wie das Pedal ein Live-Eingang, nicht Teil des Tunes) | `ack` |
 | `shift` | `{ "gear": 2 }` (0 = Leerlauf, 1..6; sequenziell mit automatischer Kupplung) | `ack` oder `error` (ungültiger Gang, Schaltung läuft, Dyno-Lauf) |
 | `setClutch` | `{ "pressed": true }` (Kupplungspedal; getreten = Kupplung offen) | `ack` |
+| `setBrake` | `{ "value": 0.0..1.0 }` (Bremspedal, wird geklemmt; Live-Eingang wie das Gaspedal) | `ack` |
 | `startRollerRun` | `{ "gear": 4, "rpmFrom": 1500, "rpmTo": 6800 }` (`rpmFrom`/`rpmTo` optional) | `ack` oder `error`; danach `dynoProgress` und am Ende `dynoResult` mit `kind: "roller"` an alle |
 
 - `x`/`y` sind Indizes (Spalte = Drehzahl-Bin, Zeile = MAP-Bin), `value` in der Einheit der Tabelle.
@@ -94,6 +95,7 @@ heisst «nicht vorhanden»: `iat_C`, `boost_kPa`, `turboSpeed_rpm`, `wastegateDu
 geschlossen), `vehicleSpeed_kmh`, `wheelTorque_Nm` (Iteration 10).
 Seit Iteration 10 sind `gear`, `clutch`, `vehicleSpeed_kmh` und `wheelTorque_Nm` immer Zahlen, dazu
 `clutchLocked` (Motor und Auto drehen gemeinsam) und `shifting` (Zugkraftunterbrechung beim Schalten).
+Seit 10b zusätzlich `brake` (Bremspedal 0..1).
 
 ### `overrunSettings` (Antwort auf `getOverrunSettings`, Broadcast nach `setOverrunSettings`)
 ```json

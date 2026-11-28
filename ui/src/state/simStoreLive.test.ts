@@ -383,6 +383,17 @@ describe('SimStore drivetrain', () => {
     expect(source.sentOfType('setClutch').at(-1)?.payload).toEqual({ pressed: false });
   });
 
+  it('sends the brake pedal once per change and releases it after a reconnect', () => {
+    const { store, source } = connectedStore();
+    source.sent.length = 0;
+    store.setBrake(true);
+    store.setBrake(true);
+    expect(source.sentOfType('setBrake').map((m) => m.payload)).toEqual([{ value: 1 }]);
+    source.server({ type: 'hello', payload: HELLO });
+    expect(store.getSnapshot().brakePressed).toBe(false);
+    expect(source.sentOfType('setBrake').at(-1)?.payload).toEqual({ value: 0 });
+  });
+
   it('runs a roller run like a sweep and names the gear in the run', () => {
     const { store, source } = connectedStore();
     store.startRollerRun(4);

@@ -183,6 +183,10 @@ export class FakeSimSource implements SimSource {
           this.error(message.id, `cannot shift to gear ${String(message.payload.gear)} now`);
         }
         return;
+      case 'setBrake':
+        this.engine.setBrake(message.payload.value);
+        this.ack(message.id);
+        return;
       case 'setClutch':
         this.engine.setClutch(message.payload.pressed);
         this.ack(message.id);

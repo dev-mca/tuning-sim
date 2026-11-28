@@ -122,6 +122,7 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - Iteration **7c – 2-Step im Stand ✅** (2026-11-28, ADR 0014).
 - Iteration **10a – Protokoll-Vertrag ✅** (2026-11-28).
 - Iteration **10 – Antriebsstrang ✅** (2026-11-28, ADR 0015): Auto steht immer auf der Rolle, im Leerlauf dreht der Motor frei wie früher.
+- Iteration **10b – Bremse ✅** (2026-11-28): Taste B; Leertaste scrollt nicht mehr.
 - Nächste Iteration: **8 – Turbo** (danach 9 Kompressor).
 - System des Nutzers: Fedora Linux 43 (KDE), GCC 15.3.1, CMake 3.31.11, Ninja 1.13.1, clang-format 21.1.8, Python 3.14.10, Node 22.23.5/npm 10.9.9, git 2.56.1, gh 2.87.3 (kein clang++). Details und Bibliotheksversionen: `docs/setup.md`
 - GitHub: https://github.com/dev-mca/tuning-sim (**öffentlich**), Remote via SSH, Branch `main`
@@ -161,4 +162,5 @@ CI: `.github/workflows/ci.yml` führt bei jedem Push auf `main` und `iter/**` al
 - 2026-11-28: Protokolländerungen beginnen beim Beispiel in `shared/protocol/v1/` (Vertragstests in core und ui, `docs/interface.md` «Vertrag»). Im TS-Vertragstest steht `Required<EngineState>`, deshalb meldet der Typecheck fehlende Felder.
 - 2026-11-28: Blockiert ein Hook einen Bash-Befehl, läuft **nichts** davon, auch Dateiänderungen davor nicht. Danach prüfen, ob die Änderung wirklich drin ist.
 - 2026-11-28: Antriebsstrang: `EngineSimulation::step` ist in `prepare()` + `finish(load)` geteilt (Lab und C++ gleich); die Kupplung sitzt dazwischen. Golden Files bleiben bitgleich, weil `step()` = prepare + finish dieselbe Rechenreihenfolge hat.
+- 2026-11-28: Gehaltene Tasten (Leertaste, L, C, B) senden Wiederholungen: `preventDefault` bei jeder, Aktion nur beim ersten Ereignis (bzw. Store filtert doppelte Werte).
 - 2026-11-18: GitHub blockiert Pushes mit privater Commit-Mail (GH007). In diesem Repo ist lokal `user.email` = GitHub-Noreply-Adresse gesetzt. Nicht ändern, das Repo ist öffentlich.

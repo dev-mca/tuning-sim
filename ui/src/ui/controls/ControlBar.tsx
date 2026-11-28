@@ -31,9 +31,12 @@ export function ControlBar({ onSourceChange }: { onSourceChange: (kind: SourceKi
 
   useEffect(() => {
     const down = (event: KeyboardEvent): void => {
-      if (event.key === BLIP_KEY && !event.repeat && !isTypingTarget(event.target)) {
+      if (event.key === BLIP_KEY && !isTypingTarget(event.target)) {
+        // Every repeat of a held key must be stopped, or the browser scrolls the page.
         event.preventDefault();
-        setBlipping(true);
+        if (!event.repeat) {
+          setBlipping(true);
+        }
       }
     };
     const up = (event: KeyboardEvent): void => {

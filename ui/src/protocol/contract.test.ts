@@ -137,6 +137,7 @@ const state: Required<EngineState> = {
   wheelTorque_Nm: 0,
   clutchLocked: false,
   shifting: false,
+  brake: 0,
 };
 
 const table: TableData = {
@@ -228,6 +229,7 @@ const CLIENT_SAMPLES: Sample<ClientMessage> = {
   setLaunchSwitch: { v: 1, type: 'setLaunchSwitch', id: '11', payload: { held: true } },
   shift: { v: 1, type: 'shift', id: '12', payload: { gear: 2 } },
   setClutch: { v: 1, type: 'setClutch', id: '13', payload: { pressed: true } },
+  setBrake: { v: 1, type: 'setBrake', id: '15', payload: { value: 1 } },
   startRollerRun: { v: 1, type: 'startRollerRun', id: '14', payload: rollerRun },
 };
 

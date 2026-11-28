@@ -11,6 +11,7 @@
 
 #include "domain/engine/engine_definition.hpp"
 
+#include <algorithm>
 #include <optional>
 
 namespace simcore {
@@ -30,6 +31,7 @@ struct DrivetrainState {
     double clutchTorque_Nm = 0.0; // from the engine; negative = engine braking
     double wheelTorque_Nm = 0.0;  // both driven wheels: T_clutch i eta (§8.1)
     double wheelForce_N = 0.0;    // drive force at the tyres = what the roller dyno measures
+    double brake = 0.0;           // brake pedal 0..1
 };
 
 /// F_air + F_roll at speed v >= 0 (research.md §8.2); the rollers simulate both.
@@ -41,6 +43,8 @@ public:
 
     // --- driver inputs ---
     void setClutchPedal(bool pressed) noexcept { pedalPressed_ = pressed; }
+    /// Brake pedal 0..1 (clamped).
+    void setBrake(double pedal) noexcept { brake_ = std::clamp(pedal, 0.0, 1.0); }
     /// Starts a shift to `gear` (0 = neutral); false if invalid or already shifting.
     bool shift(int gear) noexcept;
     /// Takes the gear out at once (engine dyno sweep: the brake sits on the crank).
@@ -80,6 +84,7 @@ private:
     [[nodiscard]] double inputSpeed_rad_s() const;
     [[nodiscard]] double wheelForce(double clutchTorque_Nm) const;
     [[nodiscard]] double lockedClutchTorque(double engineTorque_Nm) const;
+    [[nodiscard]] double resistance_N(double driveForce_N) const;
     double lock(double engineSpeed_rad_s);
 
     DrivetrainParameters parameters_;
@@ -94,6 +99,7 @@ private:
     double shiftElapsed_s_ = 0.0;
     double speed_m_s_ = 0.0;
     double clutchTorque_Nm_ = 0.0;
+    double brake_ = 0.0;
 };
 
 } // namespace simcore

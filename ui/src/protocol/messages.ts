@@ -116,6 +116,8 @@ export interface EngineState {
   clutchLocked?: boolean;
   /** Torque interruption of a shift (since iteration 10). */
   shifting?: boolean;
+  /** Brake pedal 0..1 (since iteration 10b). */
+  brake?: number;
 }
 
 /** What the ECU does when the driver lifts off at speed (research.md §3.3). */
@@ -225,6 +227,7 @@ export type ClientMessage =
   | Envelope<'setLaunchSwitch', { held: boolean }>
   | Envelope<'shift', { gear: number }>
   | Envelope<'setClutch', { pressed: boolean }>
+  | Envelope<'setBrake', { value: number }>
   | Envelope<'startRollerRun', StartRollerRunPayload>;
 
 /** Volume 0..1; mute keeps the volume for later. */

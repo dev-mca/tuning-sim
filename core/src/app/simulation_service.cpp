@@ -112,6 +112,10 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                                                       std::to_string(command.gear) + " now"});
                        }
                    },
+                   [&](const SetBrake& command) {
+                       car_.drivetrain().setBrake(command.value);
+                       reply(incoming, Ack{});
+                   },
                    [&](const SetClutch& command) {
                        car_.drivetrain().setClutchPedal(command.pressed);
                        reply(incoming, Ack{});
@@ -270,6 +274,7 @@ void SimulationService::publish(const SimulationState& state, const DrivetrainSt
     snapshot.wheelTorque_Nm = drivetrain.wheelTorque_Nm;
     snapshot.clutchLocked = drivetrain.clutchState == ClutchState::Locked;
     snapshot.shifting = drivetrain.shifting;
+    snapshot.brake = drivetrain.brake;
     publisher_.publishState(snapshot);
 }
 

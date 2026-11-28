@@ -29,7 +29,7 @@ Tunes are saved and loaded with the buttons at the top right (JSON, ADR 0006); t
 the overrun settings of the "Overrun · pops & bangs" panel (ADR 0008) and the launch settings
 of the "Launch control · 2-step" panel (ADR 0014). Hold `L` (or the Launch button) with full
 throttle for the 2-step; release to launch. The 'Gearbox · roller dyno' panel shifts with
-`E`/`Q` and presses the clutch with `C` (ADR 0015); 1st gear, hold `C`, floor it, release `C`
+`E`/`Q` and presses the clutch with `C` and the brake with `B` (ADR 0015); 1st gear, hold `C`, floor it, release `C`
 launches the car. 'Roller run' in the dyno panel measures power at the wheels.
 
 ## Structure (iterations 5 and 6, ADR 0005/0006)

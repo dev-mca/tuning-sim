@@ -55,7 +55,10 @@
     "shiftTime_s": 0.15,
     "shiftEngageTime_s": 0.15,
     "launchMaxSpeed_kmh": 5.0,
-    "stallSpeed_rpm": 350.0
+    "stallSpeed_rpm": 350.0,
+    "brakeMaxDeceleration_m_s2": 9.0,
+    "brakeHoldFactor": 2.5,
+    "_assumption_brake": "Full brake decelerates the moving car with about 0.9 g (tyre grip). Standing, the brake holds the driven wheels directly, so its torque (not the grip) counts: about 2.5x the grip-limited force [prüfen]."
   },
   "inertia_kg_m2": 0.20,
   "_assumption_inertia": "Crank train plus dual-mass flywheel, research.md §2.11 gives 0.15-0.25 kg m^2.",

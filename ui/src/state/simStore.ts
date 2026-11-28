@@ -69,6 +69,8 @@ export interface SimSnapshot {
   launchSwitch: boolean;
   /** Whether the user presses the clutch pedal (live input, iteration 10). */
   clutchPressed: boolean;
+  /** Whether the user presses the brake pedal (live input, iteration 10b). */
+  brakePressed: boolean;
 }
 
 export interface Toast {
@@ -134,6 +136,7 @@ export class SimStore {
       originalLaunch: null,
       launchSwitch: false,
       clutchPressed: false,
+      brakePressed: false,
     };
   }
 
@@ -214,6 +217,15 @@ export class SimStore {
     }
     this.update({ clutchPressed: pressed });
     this.send({ type: 'setClutch', payload: { pressed } });
+  }
+
+  /** Presses (full brake) or releases the brake pedal; repeated calls send nothing. */
+  setBrake(pressed: boolean): void {
+    if (this.snapshot.brakePressed === pressed) {
+      return;
+    }
+    this.update({ brakePressed: pressed });
+    this.send({ type: 'setBrake', payload: { value: pressed ? 1 : 0 } });
   }
 
   stopSweep(): void {
@@ -417,9 +429,10 @@ export class SimStore {
     this.send({ type: 'getOverrunSettings', payload: {} });
     this.send({ type: 'getLaunchSettings', payload: {} });
     // A held button may have been released while disconnected: start released (safe).
-    this.update({ launchSwitch: false, clutchPressed: false });
+    this.update({ launchSwitch: false, clutchPressed: false, brakePressed: false });
     this.send({ type: 'setLaunchSwitch', payload: { held: false } });
     this.send({ type: 'setClutch', payload: { pressed: false } });
+    this.send({ type: 'setBrake', payload: { value: 0 } });
   }
 
   /** A rejected table edit leaves the optimistic local copy wrong, so fetch the real table. */

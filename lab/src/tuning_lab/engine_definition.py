@@ -103,6 +103,10 @@ class DrivetrainParameters:
     """Launch control is armed by the clutch only below this speed (standing car)."""
     stall_speed_rad_s: float
     """Below this the engine has stalled; it restarts once the drivetrain is decoupled."""
+    brake_max_deceleration_m_s2: float
+    """Deceleration of the car mass at full brake pedal (about 0.9 g, research.md §8.5)."""
+    brake_hold_factor: float
+    """Standing, the brake holds this many times the grip-limited force (brake torque)."""
 
     @property
     def gear_count(self) -> int:
@@ -240,4 +244,6 @@ def _drivetrain_from_dict(data: dict[str, Any]) -> DrivetrainParameters:
         shift_engage_time_s=float(data["shiftEngageTime_s"]),
         launch_max_speed_m_s=units.kmh_to_ms(float(data["launchMaxSpeed_kmh"])),
         stall_speed_rad_s=units.rpm_to_rad_s(float(data["stallSpeed_rpm"])),
+        brake_max_deceleration_m_s2=float(data["brakeMaxDeceleration_m_s2"]),
+        brake_hold_factor=float(data["brakeHoldFactor"]),
     )

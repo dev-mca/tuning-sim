@@ -89,6 +89,8 @@ export class FakeEngine {
   private launchSwitch = false;
   private gear = 0;
   private clutchPressed = false;
+  /** Shown only: the fake has no vehicle dynamics. */
+  private brake = 0;
 
   constructor(engine: EngineInfo, reference: TableSet, seed: number) {
     this.engine = engine;
@@ -117,6 +119,10 @@ export class FakeEngine {
     }
     this.gear = gear;
     return true;
+  }
+
+  setBrake(value: number): void {
+    this.brake = clamp01(value);
   }
 
   setClutch(pressed: boolean): void {
@@ -265,7 +271,12 @@ export class FakeEngine {
   /** Rough stand-in: the car moves with the engine whenever a gear is in and the clutch is up. */
   private drivetrainState(engineTorque_Nm: number): Partial<EngineState> {
     const ratio = this.overallRatio();
-    const common = { gear: this.gear, clutch: this.clutchPressed ? 0 : 1, shifting: false };
+    const common = {
+      gear: this.gear,
+      clutch: this.clutchPressed ? 0 : 1,
+      shifting: false,
+      brake: this.brake,
+    };
     if (ratio === null || this.clutchPressed) {
       return { ...common, vehicleSpeed_kmh: 0, wheelTorque_Nm: 0, clutchLocked: false };
     }

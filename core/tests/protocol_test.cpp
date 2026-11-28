@@ -212,3 +212,9 @@ TEST_CASE("charging and drivetrain fields are null until an engine provides them
     CHECK(payload["vehicleSpeed_kmh"].get<double>() == doctest::Approx(36.0));
     CHECK(payload["wheelTorque_Nm"].get<double>() == 2500.0);
 }
+
+TEST_CASE("setBrake is decoded and clamped") {
+    CHECK(decodeAs<SetBrake>(R"({"v":1,"type":"setBrake","payload":{"value":1.7}})").value == 1.0);
+    CHECK(decodeAs<SetBrake>(R"({"v":1,"type":"setBrake","payload":{"value":0.3}})").value ==
+          doctest::Approx(0.3));
+}

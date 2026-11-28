@@ -108,7 +108,9 @@ DrivetrainParameters parseDrivetrain(const json& drivetrain) {
         drivetrain.at("shiftTime_s").get<double>(),
         drivetrain.at("shiftEngageTime_s").get<double>(),
         units::kmhToMs(drivetrain.at("launchMaxSpeed_kmh").get<double>()),
-        rpm(drivetrain, "stallSpeed_rpm")};
+        rpm(drivetrain, "stallSpeed_rpm"),
+        drivetrain.at("brakeMaxDeceleration_m_s2").get<double>(),
+        drivetrain.at("brakeHoldFactor").get<double>()};
     if (parameters.gearRatios.empty() ||
         std::any_of(parameters.gearRatios.begin(), parameters.gearRatios.end(),
                     [](double ratio) { return ratio <= 0.0; })) {
