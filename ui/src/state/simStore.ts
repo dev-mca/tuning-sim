@@ -14,6 +14,7 @@ import {
   type DynoResultPayload,
   type EngineState,
   type HelloPayload,
+  type LaunchSettings,
   type OverrunSettings,
   PROTOCOL_VERSION,
   type ServerMessage,
@@ -60,6 +61,12 @@ export interface SimSnapshot {
   overrun: OverrunSettings | null;
   /** Overrun settings as first received, for "revert". */
   originalOverrun: OverrunSettings | null;
+  /** ECU launch control (2-step) settings; null until simcore reported them. */
+  launch: LaunchSettings | null;
+  /** Launch settings as first received, for "revert". */
+  originalLaunch: LaunchSettings | null;
+  /** Whether the user holds the launch button (a live input like the pedal). */
+  launchSwitch: boolean;
 }
 
 export interface Toast {
@@ -113,6 +120,9 @@ export class SimStore {
       audio,
       overrun: null,
       originalOverrun: null,
+      launch: null,
+      originalLaunch: null,
+      launchSwitch: false,
     };
   }
 
@@ -205,7 +215,22 @@ export class SimStore {
     this.send({ type: 'setOverrunSettings', payload: settings });
   }
 
-  /** The editable tables (and overrun settings) as a tune file, or null while unknown. */
+  /** Changes the launch settings, optimistic like setOverrun. */
+  setLaunch(settings: LaunchSettings): void {
+    this.update({ launch: settings });
+    this.send({ type: 'setLaunchSettings', payload: settings });
+  }
+
+  /** Presses or releases the launch button; repeated calls with the same value send nothing. */
+  setLaunchSwitch(held: boolean): void {
+    if (this.snapshot.launchSwitch === held) {
+      return;
+    }
+    this.update({ launchSwitch: held });
+    this.send({ type: 'setLaunchSwitch', payload: { held } });
+  }
+
+  /** The editable tables (and ECU settings) as a tune file, or null while unknown. */
   exportTune(savedAt: Date): TuneFile | null {
     const engine = this.snapshot.hello?.engine.id;
     if (engine === undefined || this.snapshot.tables.size === 0) {
@@ -216,6 +241,7 @@ export class SimStore {
       this.snapshot.tables.values(),
       savedAt,
       this.snapshot.overrun ?? undefined,
+      this.snapshot.launch ?? undefined,
     );
   }
 
@@ -234,6 +260,9 @@ export class SimStore {
     if (tune.overrun !== undefined) {
       this.setOverrun(tune.overrun); // settings are not part of the undo history
     }
+    if (tune.launch !== undefined) {
+      this.setLaunch(tune.launch);
+    }
     return changes.reduce((sum, change) => sum + change.cells.length, 0);
   }
 
@@ -250,6 +279,9 @@ export class SimStore {
     this.applyStep(changes.filter((change) => change.cells.length > 0));
     if (this.snapshot.originalOverrun !== null) {
       this.setOverrun(this.snapshot.originalOverrun);
+    }
+    if (this.snapshot.originalLaunch !== null) {
+      this.setLaunch(this.snapshot.originalLaunch);
     }
   }
 
@@ -320,6 +352,12 @@ export class SimStore {
           originalOverrun: this.snapshot.originalOverrun ?? message.payload,
         });
         return;
+      case 'launchSettings':
+        this.update({
+          launch: message.payload,
+          originalLaunch: this.snapshot.originalLaunch ?? message.payload,
+        });
+        return;
       case 'ack':
         return;
     }
@@ -338,6 +376,10 @@ export class SimStore {
     this.send({ type: 'setPedal', payload: { value: this.pedal } });
     this.send({ type: 'setAudio', payload: this.snapshot.audio });
     this.send({ type: 'getOverrunSettings', payload: {} });
+    this.send({ type: 'getLaunchSettings', payload: {} });
+    // A held button may have been released while disconnected: start released (safe).
+    this.update({ launchSwitch: false });
+    this.send({ type: 'setLaunchSwitch', payload: { held: false } });
   }
 
   /** A rejected table edit leaves the optimistic local copy wrong, so fetch the real table. */
@@ -348,6 +390,9 @@ export class SimStore {
     }
     if (request?.type === 'setOverrunSettings') {
       this.send({ type: 'getOverrunSettings', payload: {} });
+    }
+    if (request?.type === 'setLaunchSettings') {
+      this.send({ type: 'getLaunchSettings', payload: {} });
     }
   }
 

@@ -92,4 +92,29 @@ describe('UI store against a live simcore', () => {
     },
     2 * TIMEOUT_MS,
   );
+
+  it(
+    'holds the launch speed with the 2-step and revs on after release (iteration 7c)',
+    async () => {
+      store.setLaunch({ enabled: true, launch_rpm: 4000, retard_deg: 10 });
+      store.setLaunchSwitch(true);
+      store.setPedal(1);
+      const held = await waitFor('2-step at the launch speed', () => {
+        const state = store.latestState();
+        return state?.launchActive === true && state.rpm > 3800 ? state : null;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const later = await waitFor('state', () => store.latestState());
+      expect(held.launchSwitch).toBe(true);
+      expect(later.rpm).toBeLessThan(4150);
+
+      store.setLaunchSwitch(false);
+      await waitFor('revs above the launch speed', () => {
+        const state = store.latestState();
+        return state !== null && !state.launchActive && state.rpm > 5000;
+      });
+      store.setPedal(0);
+    },
+    TIMEOUT_MS,
+  );
 });

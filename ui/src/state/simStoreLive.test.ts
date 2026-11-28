@@ -283,3 +283,55 @@ describe('SimStore overrun settings', () => {
     expect(source.sentOfType('setOverrunSettings').at(-1)?.payload).toEqual(pops);
   });
 });
+
+describe('SimStore launch control', () => {
+  const stock = { enabled: false, launch_rpm: 4000, retard_deg: 0 };
+  const twoStep = { enabled: true, launch_rpm: 4000, retard_deg: 10 };
+
+  it('asks for the settings after hello, changes them optimistically and reverts', () => {
+    const { store, source } = connectedStore();
+    expect(source.sentOfType('getLaunchSettings')).toHaveLength(1);
+    source.server({ type: 'launchSettings', payload: stock });
+    store.setLaunch(twoStep);
+    expect(store.getSnapshot().launch).toEqual(twoStep);
+    expect(source.sentOfType('setLaunchSettings').at(-1)?.payload).toEqual(twoStep);
+    store.revertToOriginal();
+    expect(source.sentOfType('setLaunchSettings').at(-1)?.payload).toEqual(stock);
+  });
+
+  it('asks again when simcore rejects a change', () => {
+    const { store, source } = connectedStore();
+    store.setLaunch({ enabled: true, launch_rpm: 9000, retard_deg: 10 });
+    const request = source.sentOfType('setLaunchSettings').at(-1);
+    source.sent.length = 0;
+    source.server({
+      type: 'error',
+      id: request?.id,
+      payload: { message: 'launch speed must be 2000..6500 1/min' },
+    });
+    expect(source.sentOfType('getLaunchSettings')).toHaveLength(1);
+  });
+
+  it('sends the launch button and releases it after a reconnect', () => {
+    const { store, source } = connectedStore();
+    expect(source.sentOfType('setLaunchSwitch').at(-1)?.payload).toEqual({ held: false });
+    source.sent.length = 0;
+    store.setLaunchSwitch(true);
+    store.setLaunchSwitch(true); // key repeat: sent only once
+    expect(source.sentOfType('setLaunchSwitch').map((m) => m.payload)).toEqual([{ held: true }]);
+    expect(store.getSnapshot().launchSwitch).toBe(true);
+    source.server({ type: 'hello', payload: HELLO });
+    expect(store.getSnapshot().launchSwitch).toBe(false);
+    expect(source.sentOfType('setLaunchSwitch').at(-1)?.payload).toEqual({ held: false });
+  });
+
+  it('saves the launch settings in the tune file and loads them back', () => {
+    const { store, source } = connectedStore();
+    source.server({ type: 'launchSettings', payload: twoStep });
+    const tune = store.exportTune(new Date(2026, 10, 28));
+    expect(tune?.launch).toEqual(twoStep);
+    source.server({ type: 'launchSettings', payload: stock });
+    store.importTune(JSON.stringify(tune));
+    expect(source.sentOfType('setLaunchSettings').at(-1)?.payload).toEqual(twoStep);
+  });
+});

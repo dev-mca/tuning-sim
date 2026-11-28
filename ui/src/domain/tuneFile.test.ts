@@ -177,3 +177,14 @@ describe('overrun settings in tune files', () => {
     expect(() => parseTuneFile(JSON.stringify(broken))).toThrow(/overrun settings/);
   });
 });
+
+describe('launch settings in tune files', () => {
+  it('are optional, round-trip and are validated', () => {
+    expect(createTuneFile('i6', [ve], savedAt).launch).toBeUndefined();
+    const twoStep = { enabled: true, launch_rpm: 4000, retard_deg: 10 };
+    const tune = createTuneFile('i6', [ve], savedAt, undefined, twoStep);
+    expect(parseTuneFile(JSON.stringify(tune)).launch).toEqual(twoStep);
+    const broken = { ...tune, launch: { enabled: 'yes', launch_rpm: 4000, retard_deg: 10 } };
+    expect(() => parseTuneFile(JSON.stringify(broken))).toThrow(/launch settings/);
+  });
+});

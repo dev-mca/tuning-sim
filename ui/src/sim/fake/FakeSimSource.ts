@@ -2,6 +2,7 @@ import { applyCells } from '../../domain/tableEdit.ts';
 import {
   type CellValue,
   type ClientMessage,
+  type LaunchSettings,
   type OverrunSettings,
   PROTOCOL_VERSION,
   type ServerMessage,
@@ -24,6 +25,9 @@ const FAKE_VERSION = 'fake-0.1.0';
 /** Same limits as simcore (core/src/domain/ecu/ecu.hpp). */
 const MAX_OVERRUN_RETARD_DEG = 60;
 const MAX_OVERRUN_ENRICHMENT_PCT = 50;
+const MIN_LAUNCH_RPM = 2000;
+const MAX_LAUNCH_RPM = 6500;
+const MAX_LAUNCH_RETARD_DEG = 30;
 const DEFAULT_SEED = 1;
 
 export interface FakeSimSourceOptions {
@@ -49,6 +53,7 @@ export class FakeSimSource implements SimSource {
   private sweepRange = { rpmFrom: 0, rpmTo: 0 };
   /** Stored and echoed only: the fake has no afterburn physics and no sound. */
   private overrun: OverrunSettings = { fuelCut: true, retard_deg: 0, enrichment_pct: 0 };
+  private launch: LaunchSettings = { enabled: false, launch_rpm: 4000, retard_deg: 0 };
 
   constructor(options: FakeSimSourceOptions = {}) {
     this.reference = toTableSet(referenceTables());
@@ -130,6 +135,21 @@ export class FakeSimSource implements SimSource {
       case 'setOverrunSettings':
         this.setOverrun(message.payload, message.id);
         return;
+      case 'getLaunchSettings':
+        this.emit({
+          v: PROTOCOL_VERSION,
+          type: 'launchSettings',
+          id: message.id,
+          payload: this.launch,
+        });
+        return;
+      case 'setLaunchSettings':
+        this.setLaunch(message.payload, message.id);
+        return;
+      case 'setLaunchSwitch':
+        this.engine.setLaunchSwitch(message.payload.held);
+        this.ack(message.id);
+        return;
     }
   }
 
@@ -164,6 +184,22 @@ export class FakeSimSource implements SimSource {
     this.overrun = { ...settings };
     this.ack(id);
     this.emit({ v: PROTOCOL_VERSION, type: 'overrunSettings', payload: this.overrun });
+  }
+
+  private setLaunch(settings: LaunchSettings, id: string | undefined): void {
+    const { launch_rpm, retard_deg } = settings;
+    if (!(launch_rpm >= MIN_LAUNCH_RPM && launch_rpm <= MAX_LAUNCH_RPM)) {
+      this.error(id, 'launch speed must be 2000..6500 1/min');
+      return;
+    }
+    if (!(retard_deg >= 0 && retard_deg <= MAX_LAUNCH_RETARD_DEG)) {
+      this.error(id, 'launch retard must be 0..30 deg');
+      return;
+    }
+    this.launch = { ...settings };
+    this.engine.setLaunch(this.launch);
+    this.ack(id);
+    this.emit({ v: PROTOCOL_VERSION, type: 'launchSettings', payload: this.launch });
   }
 
   private sendTable(tableId: TableId, id: string | undefined): void {
