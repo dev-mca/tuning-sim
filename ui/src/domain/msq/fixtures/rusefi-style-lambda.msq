@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic test fixture written by hand for tuning-sim (not exported from a real ECU). -->
+<msq xmlns="http://www.msefi.com/:msq">
+  <versionInfo fileFormat="5.0" nPages="1" signature="synthetic-rusefi-style"/>
+  <page number="0">
+    <constant name="veTable" cols="3" rows="2" units="%">
+      50 60 70
+      80 90 100
+    </constant>
+    <constant name="veRpmBins" cols="1" rows="3" units="RPM">1000 4000 7000</constant>
+    <constant name="veLoadBins" cols="1" rows="2" units="kPa">20 105</constant>
+    <constant name="lambdaTable" cols="2" rows="2" units="lambda">
+      1.0 1.0
+      0.9 0.85
+    </constant>
+    <constant name="lambdaRpmBins" cols="1" rows="2" units="RPM">800 7500</constant>
+    <constant name="lambdaLoadBins" cols="1" rows="2" units="kPa">20 105</constant>
+  </page>
+</msq>
