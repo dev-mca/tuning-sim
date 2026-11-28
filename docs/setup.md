@@ -83,3 +83,61 @@ Exakte UI-Versionen stehen in `ui/package-lock.json`.
 | actions/setup-node | v7 (7.1.0) | Node 22 |
 | Runner | ubuntu-24.04 | CMake 3.31, Ninja 1.13, GCC 14 (`CXX=g++-14`) |
 | clang-format (PyPI) | 21.1.8 | gleiche Version wie lokal |
+
+## Desktop-App (Tauri, `app/`)
+
+Ermittelt am 2026-11-28 aus crates.io (API) und der npm-Registry (`npm view`), neueste stabile
+2.x-Versionen (Tauri 3 ist erst Alpha). Exakte Versionen: `app/src-tauri/Cargo.lock` und
+`app/package-lock.json`. Entscheide: ADR 0009.
+
+### Werkzeuge und Systempakete
+
+| Tool | Version | Installation (Fedora) |
+|---|---|---|
+| rustup | 1.29.3 | rustup.rs, nach `~/.cargo/bin` (nicht im `PATH`: `export PATH="$HOME/.cargo/bin:$PATH"`) |
+| rustc / cargo | 1.100.1 / 1.100.1 | stable über rustup; Tauri 2.12 braucht ≥ 1.90 |
+| rustfmt, clippy | mit rustc 1.100.1 | `rustup component add rustfmt clippy` |
+| webkit2gtk4.1-devel | 2.54.2 | `sudo dnf install webkit2gtk4.1-devel` |
+| gtk3-devel | 3.24.52 | dito |
+| libappindicator-gtk3-devel | 12.10.1 | dito |
+| librsvg2-devel | 2.61.5 | dito |
+| openssl-devel | 3.5.9 | dito |
+| rpm-build | 6.0.2 | vorinstalliert; für das RPM-Paket |
+
+### Bibliotheken
+
+| Paket | Version | Lizenz | Hinweis |
+|---|---|---|---|
+| tauri (crate) | 2.12.7 | Apache-2.0 OR MIT | Laufzeit der Hülle |
+| tauri-build (crate) | 2.7.6 | Apache-2.0 OR MIT | `build.rs`, prüft Sidecar und Konfiguration |
+| tauri-plugin-dialog (crate) | 2.8.4 | Apache-2.0 OR MIT | Fehlerdialog, wenn simcore nicht startet |
+| libc (crate) | 0.2.191 | MIT OR Apache-2.0 | SIGTERM und `PR_SET_PDEATHSIG` |
+| @tauri-apps/cli (npm) | 2.12.6 | Apache-2.0 OR MIT | `tauri dev` / `tauri build` |
+
+### Bauen und starten
+
+```bash
+# 1. simcore bauen (Repo-Root); die Hülle kopiert dieses Binary als Sidecar
+cmake --preset release && cmake --build --preset release
+
+# 2. Hülle (aus app/)
+export PATH="$HOME/.cargo/bin:$PATH"
+npm ci                       # einmalig: Tauri-CLI
+npm run dev                  # Entwicklung: Vite auf :5180 + Fenster, simcore auf :47800
+npm run build                # Release: ui/dist + RPM unter src-tauri/target/release/bundle/rpm/
+sudo dnf install ./src-tauri/target/release/bundle/rpm/tuning-sim-0.1.0-1.x86_64.rpm
+tuning-sim                   # installiert: Startmenü-Eintrag «tuning-sim» oder Terminal
+
+# Checks (aus app/src-tauri/; vorher einmal: npm run stage-sidecar)
+cargo test                   # inkl. Start/Stopp gegen das echte simcore, ohne Fenster
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
+```
+
+- **Anderer Port** (z. B. wenn ein eigenes simcore auf 47800 läuft):
+  `TUNING_SIM_PORT=47801 npm run dev`. Das Skript `scripts/prepare-ui.sh` baut bzw. startet die UI
+  mit derselben Adresse. Für `npm run build` gilt dasselbe; die gebaute UI kennt nur diesen Port.
+- **Ohne Ton**: `TUNING_SIM_NO_AUDIO=1` (simcore mit `--no-audio`).
+- **Anderes simcore-Binary**: `SIMCORE_BIN=../build/debug/core/simcore npm run dev`.
+- Belegter Port, fehlendes Binary oder Timeout (10 s) → Fehlerdialog, Meldung auch auf stderr.
+- Prüfen, dass nichts übrig bleibt: `pgrep -a simcore` nach dem Schliessen des Fensters.
