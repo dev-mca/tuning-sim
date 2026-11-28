@@ -39,6 +39,9 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
 | `setAudio` | `{ "volume": 0.0..1.0, "mute": false }` (volume wird geklemmt, `mute` optional) | `ack` (auch ohne Audiogerät) |
 | `getOverrunSettings` | `{}` | `overrunSettings` |
 | `setOverrunSettings` | `{ "fuelCut": false, "retard_deg": 35, "enrichment_pct": 10 }` (retard 0..60, enrichment 0..50) | `ack` oder `error`; danach `overrunSettings` an alle |
+| `getLaunchSettings` | `{}` | `launchSettings` |
+| `setLaunchSettings` | `{ "enabled": true, "launch_rpm": 4000, "retard_deg": 10 }` (launch 2000..6500, retard 0..30) | `ack` oder `error`; danach `launchSettings` an alle |
+| `setLaunchSwitch` | `{ "held": true }` (Launch-Taste, wie das Pedal ein Live-Eingang, nicht Teil des Tunes) | `ack` |
 
 - `x`/`y` sind Indizes (Spalte = Drehzahl-Bin, Zeile = MAP-Bin), `value` in der Einheit der Tabelle.
 - `setTableCells` gilt ganz oder gar nicht: Ist eine Zelle ungültig, wird nichts geändert.
@@ -72,6 +75,13 @@ Nicht definierte Werte (z. B. λ während der Schubabschaltung) werden als `null
 des Motors, `cutActive` meldet eine aktive Kraftstoffabschaltung (Drehzahlbegrenzer oder Schubabschaltung).
 Seit Iteration 7b zusätzlich `catalyst_C` (Kat-Temperatur) und `overrunFueling` (die ECU spritzt im
 Schub ein, weil die Schubabschaltung aus ist: Pops möglich).
+Seit Iteration 7c zusätzlich `launchSwitch` (Launch-Taste gedrückt; während eines Sweeps wirkungslos),
+`launchActive` (2-Step arbeitet: eingeschaltet, Taste gedrückt, Gas offen) und `sparkCut` (der 2-Step
+unterbricht gerade die Zündung, spritzt aber weiter ein).
+Seit 10a stehen die vereinbarten Felder für spätere Iterationen schon im `state` (plan.md §11); `null`
+heisst «nicht vorhanden»: `iat_C`, `boost_kPa`, `turboSpeed_rpm`, `wastegateDuty_pct` (Iteration 8),
+`knockRetard_deg` (0 ohne Klopfen), `gear` (0 = Leerlauf, 1.. = Gänge), `clutch` (0 = offen .. 1 =
+geschlossen), `vehicleSpeed_kmh`, `wheelTorque_Nm` (Iteration 10).
 
 ### `overrunSettings` (Antwort auf `getOverrunSettings`, Broadcast nach `setOverrunSettings`)
 ```json
@@ -79,6 +89,14 @@ Schub ein, weil die Schubabschaltung aus ist: Pops möglich).
 ```
 `fuelCut` = Schubabschaltung (Serie: an). Ist sie aus, spritzt die ECU im Schub weiter ein, zündet um
 `retard_deg` später als das Kennfeld und gibt `enrichment_pct` mehr Kraftstoff (research.md §3.3, §2.10a).
+
+### `launchSettings` (Antwort auf `getLaunchSettings`, Broadcast nach `setLaunchSettings`)
+```json
+{ "v": 1, "type": "launchSettings", "payload": { "enabled": false, "launch_rpm": 4000, "retard_deg": 0 } }
+```
+Launch Control / 2-Step (research.md §3.4, Serie: aus). Mit gedrückter Launch-Taste und offenem Gas zündet
+die ECU um `retard_deg` später und hält `launch_rpm` mit Zündunterbrechung; der weiter eingespritzte
+Kraftstoff kann im heissen Auspuff knallen.
 
 ### `table` (Antwort auf `getTable`)
 Gleiches Format wie die Dateien in `shared/tables/` (plan.md §5.1), dazu `editable`:
@@ -109,6 +127,13 @@ Parallele Arrays, ein Eintrag pro 100 1/min:
   "rpm": [...], "torque_Nm": [...], "power_kW": [...], "lambda": [...], "map_kPa": [...],
   "ignition_deg": [...], "egt_C": [...], "airflow_kg_s": [...] } }
 ```
+
+## Vertrag (Beispiele)
+
+`shared/protocol/v1/server/` und `client/` enthalten je ein vollständiges Beispiel pro Nachrichtentyp.
+`core/tests/protocol_contract_test.cpp` und `ui/src/protocol/contract.test.ts` prüfen beide Seiten gegen
+dieselben Dateien (Feldnamen, Verschachtelung, JSON-Typen). Neue oder geänderte Nachricht: zuerst das
+Beispiel, dann C++ und TypeScript, dann dieses Dokument.
 
 ## Versionierung
 

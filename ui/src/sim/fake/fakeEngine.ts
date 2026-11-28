@@ -193,6 +193,15 @@ export class FakeEngine {
       launchSwitch: this.launchSwitch,
       launchActive,
       sparkCut,
+      // Naturally aspirated, no gearbox yet: the agreed fields are not available (plan.md §11).
+      boost_kPa: null,
+      turboSpeed_rpm: null,
+      wastegateDuty_pct: null,
+      knockRetard_deg: 0,
+      gear: null,
+      clutch: null,
+      vehicleSpeed_kmh: null,
+      wheelTorque_Nm: null,
     };
   }
 

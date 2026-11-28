@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "type": "dynoProgress",
+  "payload": {
+    "progress": 0.42,
+    "rpm": 3520.0
+  }
+}

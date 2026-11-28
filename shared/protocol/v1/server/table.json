@@ -1,0 +1,39 @@
+{
+  "v": 1,
+  "type": "table",
+  "id": "7",
+  "payload": {
+    "id": "ve",
+    "name": "Volumetric Efficiency",
+    "unit": "%",
+    "editable": true,
+    "xAxis": {
+      "name": "rpm",
+      "unit": "1/min",
+      "bins": [
+        800.0,
+        1200.0
+      ]
+    },
+    "yAxis": {
+      "name": "map",
+      "unit": "kPa",
+      "bins": [
+        20.0,
+        100.0
+      ]
+    },
+    "min": 0.0,
+    "max": 150.0,
+    "values": [
+      [
+        40.0,
+        45.0
+      ],
+      [
+        90.0,
+        98.0
+      ]
+    ]
+  }
+}

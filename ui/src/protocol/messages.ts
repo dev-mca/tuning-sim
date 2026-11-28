@@ -82,8 +82,8 @@ export interface EngineState {
   dynoMode: DynoMode;
   sweepProgress: number;
   cutActive: boolean;
-  /** Intake air temperature. Not sent by simcore yet (protocol v1 allows new fields). */
-  iat_C?: number;
+  /** Intake air temperature; null while simcore models the intake at ambient (until iteration 8). */
+  iat_C?: number | null;
   /** Catalyst temperature (since iteration 7b). */
   catalyst_C?: number;
   /** True while the ECU fuels in overrun with the fuel cut switched off: pops possible. */
@@ -94,6 +94,23 @@ export interface EngineState {
   launchActive?: boolean;
   /** The 2-step cuts the spark right now (fuel still injected: bangs possible). */
   sparkCut?: boolean;
+  // Agreed fields for later iterations (plan.md §11, since 10a); null = not available.
+  /** Boost above ambient (iteration 8); null without a charger. */
+  boost_kPa?: number | null;
+  /** Turbocharger shaft speed (iteration 8). */
+  turboSpeed_rpm?: number | null;
+  /** Wastegate duty cycle (iteration 8). */
+  wastegateDuty_pct?: number | null;
+  /** Ignition taken back by the knock control (iteration 8); 0 without knock. */
+  knockRetard_deg?: number;
+  /** Engaged gear (iteration 10): 0 = neutral, 1.. = forward gears; null without a gearbox. */
+  gear?: number | null;
+  /** Clutch engagement (iteration 10): 0 = open (pedal pressed) .. 1 = closed. */
+  clutch?: number | null;
+  /** Vehicle speed (iteration 10), e.g. on the roller dyno. */
+  vehicleSpeed_kmh?: number | null;
+  /** Torque at the driven wheels (iteration 10). */
+  wheelTorque_Nm?: number | null;
 }
 
 /** What the ECU does when the driver lifts off at speed (research.md §3.3). */

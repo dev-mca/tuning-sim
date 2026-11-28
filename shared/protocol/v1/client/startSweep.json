@@ -1,0 +1,11 @@
+{
+  "v": 1,
+  "type": "startSweep",
+  "id": "2",
+  "payload": {
+    "rpmFrom": 1000.0,
+    "rpmTo": 7000.0,
+    "rate_rpm_s": 300.0,
+    "pedal": 1.0
+  }
+}

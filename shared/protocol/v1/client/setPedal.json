@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "type": "setPedal",
+  "id": "1",
+  "payload": {
+    "value": 0.5
+  }
+}
