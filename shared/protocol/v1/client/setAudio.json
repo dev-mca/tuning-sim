@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "type": "setAudio",
+  "id": "6",
+  "payload": {
+    "volume": 0.7,
+    "mute": false
+  }
+}

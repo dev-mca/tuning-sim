@@ -185,3 +185,30 @@ TEST_CASE("the launch switch is decoded and the state reports launch control") {
     CHECK(payload["launchActive"] == true);
     CHECK(payload["sparkCut"] == true);
 }
+
+TEST_CASE("charging and drivetrain fields are null until an engine provides them") {
+    StateSnapshot state;
+    json payload = json::parse(codec().encodeState(state))["payload"];
+    for (const char* field : {"boost_kPa", "turboSpeed_rpm", "wastegateDuty_pct", "gear", "clutch",
+                              "vehicleSpeed_kmh", "wheelTorque_Nm"}) {
+        CAPTURE(field);
+        CHECK(payload[field].is_null());
+    }
+    CHECK(payload["knockRetard_deg"].get<double>() == 0.0);
+
+    state.boostPressure_Pa = 80.0e3;
+    state.turboSpeed_rad_s = units::rpmToRadS(150000.0);
+    state.wastegateDuty = 0.35;
+    state.gear = 3;
+    state.clutchEngagement = 1.0;
+    state.vehicleSpeed_m_s = 10.0;
+    state.wheelTorque_Nm = 2500.0;
+    payload = json::parse(codec().encodeState(state))["payload"];
+    CHECK(payload["boost_kPa"].get<double>() == doctest::Approx(80.0));
+    CHECK(payload["turboSpeed_rpm"].get<double>() == doctest::Approx(150000.0));
+    CHECK(payload["wastegateDuty_pct"].get<double>() == doctest::Approx(35.0));
+    CHECK(payload["gear"].get<int>() == 3);
+    CHECK(payload["clutch"].get<double>() == 1.0);
+    CHECK(payload["vehicleSpeed_kmh"].get<double>() == doctest::Approx(36.0));
+    CHECK(payload["wheelTorque_Nm"].get<double>() == 2500.0);
+}

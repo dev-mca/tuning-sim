@@ -15,6 +15,7 @@ inline constexpr double kWattPerKilowatt = 1.0e3;
 inline constexpr double kWattPerPs = 735.5; // metric horsepower
 inline constexpr double kKelvinOffset = 273.15;
 inline constexpr double kPercent = 100.0;
+inline constexpr double kKmhPerMetrePerSecond = 3.6;
 
 constexpr double rpmToRadS(double speed_rpm) {
     return speed_rpm * (2.0 * std::numbers::pi / kSecondsPerMinute);
@@ -39,6 +40,12 @@ constexpr double wToPs(double power_W) {
 }
 constexpr double kelvinToCelsius(double temperature_K) {
     return temperature_K - kKelvinOffset;
+}
+constexpr double msToKmh(double speed_m_s) {
+    return speed_m_s * kKmhPerMetrePerSecond;
+}
+constexpr double kmhToMs(double speed_kmh) {
+    return speed_kmh / kKmhPerMetrePerSecond;
 }
 constexpr double celsiusToKelvin(double temperature_C) {
     return temperature_C + kKelvinOffset;

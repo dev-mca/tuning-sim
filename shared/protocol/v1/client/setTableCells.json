@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "type": "setTableCells",
+  "id": "5",
+  "payload": {
+    "id": "ignition",
+    "cells": [
+      {
+        "x": 3,
+        "y": 10,
+        "value": 28.5
+      }
+    ]
+  }
+}

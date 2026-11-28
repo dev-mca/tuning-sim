@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "type": "overrunSettings",
+  "payload": {
+    "fuelCut": true,
+    "retard_deg": 0.0,
+    "enrichment_pct": 0.0
+  }
+}

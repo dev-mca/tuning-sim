@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "type": "setLaunchSettings",
+  "id": "10",
+  "payload": {
+    "enabled": true,
+    "launch_rpm": 4000.0,
+    "retard_deg": 10.0
+  }
+}

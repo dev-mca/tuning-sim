@@ -8,6 +8,7 @@
 #include "domain/ecu/table.hpp"
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -125,6 +126,17 @@ struct StateSnapshot {
     bool launchSwitch = false; // launch button held (ignored during a dyno sweep)
     bool launchActive = false; // launch control works (enabled, switch held, throttle open)
     bool sparkCut = false;     // launch control cuts the spark right now
+    // Agreed fields for later iterations (plan.md §11); empty = not available (sent as null).
+    // Charging (iteration 8):
+    std::optional<double> boostPressure_Pa; // gauge pressure above ambient
+    std::optional<double> turboSpeed_rad_s; // turbocharger shaft speed
+    std::optional<double> wastegateDuty;    // 0..1
+    double knockRetard_deg = 0.0;           // ignition taken back by the knock control
+    // Drivetrain (iteration 10):
+    std::optional<int> gear;                // 0 = neutral, 1.. = forward gears
+    std::optional<double> clutchEngagement; // 0 = open (pedal pressed) .. 1 = closed
+    std::optional<double> vehicleSpeed_m_s;
+    std::optional<double> wheelTorque_Nm; // sum of both driven wheels
 };
 
 } // namespace simcore

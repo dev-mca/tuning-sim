@@ -8,6 +8,7 @@ add_executable(simcore_tests
   launch_test.cpp
   concurrency_test.cpp
   protocol_test.cpp
+  protocol_contract_test.cpp
   simulation_service_test.cpp
   app_test.cpp
   websocket_server_test.cpp

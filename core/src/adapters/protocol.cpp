@@ -33,6 +33,20 @@ json number(double value) {
     return std::isfinite(value) ? json(value) : json(nullptr);
 }
 
+/// Not available (e.g. no turbo, no gearbox) becomes null; otherwise converted for display.
+template <typename Convert>
+json optionalNumber(const std::optional<double>& value, Convert convert) {
+    return value.has_value() ? number(convert(*value)) : json(nullptr);
+}
+
+double unchanged(double value) {
+    return value;
+}
+
+double fractionToPercent(double fraction) {
+    return fraction * kPercent;
+}
+
 std::string envelope(const char* type, const std::string& requestId, json payload) {
     json message = {{"v", kProtocolVersion}, {"type", type}, {"payload", std::move(payload)}};
     if (!requestId.empty()) {
@@ -201,7 +215,15 @@ std::string ProtocolCodec::encodeState(const StateSnapshot& state) const {
                      {"catalyst_C", units::kelvinToCelsius(state.catalystTemperature_K)},
                      {"launchSwitch", state.launchSwitch},
                      {"launchActive", state.launchActive},
-                     {"sparkCut", state.sparkCut}});
+                     {"sparkCut", state.sparkCut},
+                     {"boost_kPa", optionalNumber(state.boostPressure_Pa, units::paToKpa)},
+                     {"turboSpeed_rpm", optionalNumber(state.turboSpeed_rad_s, units::radSToRpm)},
+                     {"wastegateDuty_pct", optionalNumber(state.wastegateDuty, fractionToPercent)},
+                     {"knockRetard_deg", state.knockRetard_deg},
+                     {"gear", state.gear.has_value() ? json(*state.gear) : json(nullptr)},
+                     {"clutch", optionalNumber(state.clutchEngagement, unchanged)},
+                     {"vehicleSpeed_kmh", optionalNumber(state.vehicleSpeed_m_s, units::msToKmh)},
+                     {"wheelTorque_Nm", optionalNumber(state.wheelTorque_Nm, unchanged)}});
 }
 
 std::string ProtocolCodec::encodeError(const std::string& requestId,

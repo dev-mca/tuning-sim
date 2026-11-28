@@ -1,0 +1,29 @@
+{
+  "v": 1,
+  "type": "hello",
+  "payload": {
+    "protocolVersion": 1,
+    "simcore": "0.1.0",
+    "stateRate_Hz": 60,
+    "engine": {
+      "id": "i6_30_na",
+      "name": "3.0 l inline six",
+      "cylinders": 6,
+      "displacement_l": 2.993,
+      "idle_rpm": 750,
+      "revLimit_rpm": 7000
+    },
+    "tables": [
+      {
+        "id": "ve",
+        "name": "Volumetric Efficiency",
+        "unit": "%",
+        "editable": true
+      }
+    ],
+    "audio": {
+      "available": true,
+      "device": "Speakers (PulseAudio)"
+    }
+  }
+}
