@@ -89,7 +89,7 @@ Gleiches Format wie die Dateien in `shared/tables/` (plan.md §5.1), dazu `edita
   "yAxis": { "name": "map", "unit": "kPa", "bins": [20, ...] },
   "min": 0, "max": 150, "values": [[...16 Werte...], ...16 Zeilen...] } }
 ```
-`values[y][x]`, Zeile 0 = tiefster MAP.
+`values[y][x]`, Zeile 0 = tiefster MAP. Achsenwerte (`1/min`, `kPa`) sind auf 6 Dezimalen gerundet.
 
 ### `ack` / `error`
 ```json

@@ -158,6 +158,9 @@ TEST_CASE("client receives hello and state, commands change the simulation") {
         REQUIRE_FALSE(table.is_null());
         CHECK(table["id"] == "t1");
         CHECK(table["payload"]["values"].size() == 16);
+        // Axis bins come back as written in the table file, without rad/s float noise.
+        CHECK(table["payload"]["xAxis"]["bins"][2].dump() == "1400.0");
+        CHECK(table["payload"]["xAxis"]["bins"][6].dump() == "3000.0");
 
         // setTableCells is applied.
         client.send(

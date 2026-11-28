@@ -11,6 +11,7 @@ add_executable(simcore_tests
   app_test.cpp
   websocket_server_test.cpp
   origin_policy_test.cpp
+  table_units_test.cpp
   json_repository_test.cpp
   acoustic/dsp_test.cpp
   acoustic/pulse_source_test.cpp
