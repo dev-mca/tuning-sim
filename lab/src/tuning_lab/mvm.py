@@ -29,6 +29,9 @@ class OperatingPoint:
     fuel_mass_per_cycle_kg: float
     ignition_deg: float
     """Ignition advance in deg BTDC."""
+    spark_cut: bool = False
+    """True while the ECU cuts the spark but keeps injecting (2-step, research.md §3.4): the
+    mixture leaves the cylinder unburnt and can afterburn in the exhaust (§2.10a)."""
 
 
 @dataclass(frozen=True)
@@ -52,7 +55,7 @@ class EngineOutputs:
     exhaust_pressure_pa: float
     exhaust_temperature_k: float
     late_combustion_fraction: float
-    """Share of the burned fuel still burning at EVO (research.md §2.10a)."""
+    """Share of the burned fuel still burning at EVO (research.md §2.10a); 1 with spark cut."""
     afterburn_temperature_rise_k: float
     """Extra heat for the catalyst from fuel burning in the exhaust (research.md §2.10a)."""
 
@@ -143,6 +146,10 @@ class EngineModel:
         )
         # §2.6: with lambda < 1 oxygen is missing; at most air / AFR_st can burn.
         fuel_burned = min(fuel_per_cycle, air_per_cycle / AFR_STOICH_GASOLINE)
+        # §2.10a: without a spark the burnable mixture goes to the exhaust instead.
+        unburnt_mixture_fuel = fuel_burned if point.spark_cut else 0.0
+        if point.spark_cut:
+            fuel_burned = 0.0
 
         mbt_deg = definition.tables.ignition_mbt.lookup(speed, point.manifold_pressure_pa)
         eta_ign = ignition_efficiency(point.ignition_deg, mbt_deg, combustion)
@@ -186,21 +193,30 @@ class EngineModel:
         # §2.10a: far behind MBT the combustion is not finished at EVO; that mixture can
         # afterburn in the exhaust and heats the catalyst on top of the exhaust temperature.
         afterburn = definition.afterburn
-        retard_deg = mbt_deg - point.ignition_deg
-        late_fraction = min(
-            max(
-                (retard_deg - afterburn.late_combustion_start_deg)
-                / afterburn.late_combustion_span_deg,
-                0.0,
-            ),
-            afterburn.late_combustion_max,
-        )
-        afterburn_heat_per_cycle = (
-            afterburn.afterburn_efficiency
-            * late_fraction
-            * fuel_burned
-            * LOWER_HEATING_VALUE_GASOLINE_J_KG
-        )
+        if point.spark_cut:
+            # All burnable mixture reaches the exhaust unburnt (2-step, research.md §3.4).
+            late_fraction = 1.0
+            afterburn_heat_per_cycle = (
+                afterburn.afterburn_efficiency
+                * unburnt_mixture_fuel
+                * LOWER_HEATING_VALUE_GASOLINE_J_KG
+            )
+        else:
+            retard_deg = mbt_deg - point.ignition_deg
+            late_fraction = min(
+                max(
+                    (retard_deg - afterburn.late_combustion_start_deg)
+                    / afterburn.late_combustion_span_deg,
+                    0.0,
+                ),
+                afterburn.late_combustion_max,
+            )
+            afterburn_heat_per_cycle = (
+                afterburn.afterburn_efficiency
+                * late_fraction
+                * fuel_burned
+                * LOWER_HEATING_VALUE_GASOLINE_J_KG
+            )
         afterburn_rise = (
             afterburn_heat_per_cycle / (exhaust_mass_per_cycle * CP_EXHAUST_J_KG_K)
             if exhaust_mass_per_cycle > 0.0

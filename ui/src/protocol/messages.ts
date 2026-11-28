@@ -88,6 +88,12 @@ export interface EngineState {
   catalyst_C?: number;
   /** True while the ECU fuels in overrun with the fuel cut switched off: pops possible. */
   overrunFueling?: boolean;
+  /** Launch button held (since iteration 7c; ignored by simcore during a sweep). */
+  launchSwitch?: boolean;
+  /** 2-step works: enabled, button held, throttle open. */
+  launchActive?: boolean;
+  /** The 2-step cuts the spark right now (fuel still injected: bangs possible). */
+  sparkCut?: boolean;
 }
 
 /** What the ECU does when the driver lifts off at speed (research.md §3.3). */
@@ -98,6 +104,16 @@ export interface OverrunSettings {
   retard_deg: number;
   /** Extra fuel while fuelling in overrun. */
   enrichment_pct: number;
+}
+
+/** Launch control / 2-step while standing (research.md §3.4). */
+export interface LaunchSettings {
+  /** Stock ECUs have no launch control. */
+  enabled: boolean;
+  /** Speed held by cutting the spark while the launch button is held. */
+  launch_rpm: number;
+  /** Ignition taken back from the map while the 2-step works. */
+  retard_deg: number;
 }
 
 export interface DynoProgressPayload {
@@ -140,6 +156,7 @@ export type ErrorMessage = Envelope<'error', { message: string }>;
 export type DynoProgressMessage = Envelope<'dynoProgress', DynoProgressPayload>;
 export type DynoResultMessage = Envelope<'dynoResult', DynoResultPayload>;
 export type OverrunSettingsMessage = Envelope<'overrunSettings', OverrunSettings>;
+export type LaunchSettingsMessage = Envelope<'launchSettings', LaunchSettings>;
 
 /** Everything simcore can send to the UI. */
 export type ServerMessage =
@@ -150,7 +167,8 @@ export type ServerMessage =
   | ErrorMessage
   | DynoProgressMessage
   | DynoResultMessage
-  | OverrunSettingsMessage;
+  | OverrunSettingsMessage
+  | LaunchSettingsMessage;
 
 export interface StartSweepPayload {
   rpmFrom: number;
@@ -168,7 +186,10 @@ export type ClientMessage =
   | Envelope<'setTableCells', { id: TableId; cells: CellValue[] }>
   | Envelope<'setAudio', AudioSettings>
   | Envelope<'getOverrunSettings', Record<string, never>>
-  | Envelope<'setOverrunSettings', OverrunSettings>;
+  | Envelope<'setOverrunSettings', OverrunSettings>
+  | Envelope<'getLaunchSettings', Record<string, never>>
+  | Envelope<'setLaunchSettings', LaunchSettings>
+  | Envelope<'setLaunchSwitch', { held: boolean }>;
 
 /** Volume 0..1; mute keeps the volume for later. */
 export interface AudioSettings {

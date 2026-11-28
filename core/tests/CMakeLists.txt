@@ -5,6 +5,7 @@ add_executable(simcore_tests
   table_test.cpp
   engine_model_test.cpp
   golden_test.cpp
+  launch_test.cpp
   concurrency_test.cpp
   protocol_test.cpp
   simulation_service_test.cpp

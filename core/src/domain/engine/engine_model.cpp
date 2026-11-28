@@ -70,7 +70,10 @@ EngineOutputs EngineModel::evaluate(const OperatingPoint& point) const noexcept 
                                     ? airPerCycle / (fuelPerCycle * constants::kAfrStoichGasoline)
                                     : std::numeric_limits<double>::infinity();
     // §2.6: with lambda < 1 oxygen is missing; at most air / AFR_st can burn.
-    const double fuelBurned = std::min(fuelPerCycle, airPerCycle / constants::kAfrStoichGasoline);
+    const double burnableFuel = std::min(fuelPerCycle, airPerCycle / constants::kAfrStoichGasoline);
+    // §2.10a: without a spark the burnable mixture goes to the exhaust instead.
+    const double unburntMixtureFuel = point.sparkCut ? burnableFuel : 0.0;
+    const double fuelBurned = point.sparkCut ? 0.0 : burnableFuel;
 
     const double mbt_deg = definition_.tables.ignitionMbt.lookup(speed, point.manifoldPressure_Pa);
     const double etaIgnition = ignitionEfficiency(point.ignition_deg, mbt_deg, combustion);
@@ -109,13 +112,18 @@ EngineOutputs EngineModel::evaluate(const OperatingPoint& point) const noexcept 
     // §2.10a: far behind MBT the combustion is not finished at EVO; that mixture can afterburn
     // in the exhaust and heats the catalyst on top of the exhaust temperature.
     const AfterburnParameters& afterburn = definition_.afterburn;
-    const double retard_deg = mbt_deg - point.ignition_deg;
-    const double lateFraction = std::min(std::max((retard_deg - afterburn.lateCombustionStart_deg) /
-                                                      afterburn.lateCombustionSpan_deg,
-                                                  0.0),
-                                         afterburn.lateCombustionMax);
-    const double afterburnHeatPerCycle = afterburn.afterburnEfficiency * lateFraction * fuelBurned *
-                                         constants::kLowerHeatingValueGasoline_J_kg;
+    double lateFraction = 1.0; // spark cut: all burnable mixture reaches the exhaust (§3.4)
+    double afterburnHeatPerCycle = afterburn.afterburnEfficiency * unburntMixtureFuel *
+                                   constants::kLowerHeatingValueGasoline_J_kg;
+    if (!point.sparkCut) {
+        const double retard_deg = mbt_deg - point.ignition_deg;
+        lateFraction = std::min(std::max((retard_deg - afterburn.lateCombustionStart_deg) /
+                                             afterburn.lateCombustionSpan_deg,
+                                         0.0),
+                                afterburn.lateCombustionMax);
+        afterburnHeatPerCycle = afterburn.afterburnEfficiency * lateFraction * fuelBurned *
+                                constants::kLowerHeatingValueGasoline_J_kg;
+    }
     const double afterburnRise =
         exhaustMassPerCycle > 0.0
             ? afterburnHeatPerCycle / (exhaustMassPerCycle * constants::kCpExhaust_J_kgK)

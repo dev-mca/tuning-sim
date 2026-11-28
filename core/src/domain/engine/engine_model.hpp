@@ -14,6 +14,9 @@ struct OperatingPoint {
     double manifoldTemperature_K;
     double fuelMassPerCycle_kg;
     double ignition_deg; // advance, deg BTDC
+    /// Spark cut while injecting (2-step, research.md §3.4): the mixture leaves the cylinder
+    /// unburnt and can afterburn in the exhaust (§2.10a).
+    bool sparkCut = false;
 };
 
 struct EngineOutputs {
@@ -32,7 +35,7 @@ struct EngineOutputs {
     double brakeTorque_Nm;
     double exhaustPressure_Pa;
     double exhaustTemperature_K;
-    double lateCombustionFraction;     // share of burned fuel still burning at EVO (§2.10a)
+    double lateCombustionFraction;     // burned fuel still burning at EVO (§2.10a); 1 at spark cut
     double afterburnTemperatureRise_K; // extra catalyst heat from afterburn (§2.10a)
 };
 

@@ -28,7 +28,7 @@ SimulationState EngineSimulation::step(double throttle, double loadTorque_Nm) no
     integrateManifold(throttle, dt);
     const EngineOutputs outputs =
         model_.evaluate({speed_rad_s_, manifoldPressure_Pa_, manifoldTemperature_K_,
-                         command.fuelMassPerCycle_kg, command.ignition_deg});
+                         command.fuelMassPerCycle_kg, command.ignition_deg, command.sparkCut});
     // Semi-implicit Euler: new speed from the current torque balance.
     const double acceleration = (outputs.brakeTorque_Nm - loadTorque_Nm) / definition_.inertia_kgm2;
     speed_rad_s_ = std::max(0.0, speed_rad_s_ + dt * acceleration);

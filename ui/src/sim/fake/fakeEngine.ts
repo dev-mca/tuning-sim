@@ -6,7 +6,12 @@
  */
 import { interpolate } from '../../domain/table2d.ts';
 import { STOICHIOMETRIC_AFR_GASOLINE } from '../../domain/units.ts';
-import type { EngineInfo, EngineState, StartSweepPayload } from '../../protocol/messages.ts';
+import type {
+  EngineInfo,
+  EngineState,
+  LaunchSettings,
+  StartSweepPayload,
+} from '../../protocol/messages.ts';
 import { smoothTowards } from '../../domain/smoothing.ts';
 import {
   goldenAt,
@@ -29,6 +34,8 @@ const OVERRUN_CUT_MARGIN_RPM = 400;
 const REV_TARGET_OVERSHOOT_RPM = 400;
 /** How fast rpm falls while the limiter cuts fuel. */
 const LIMITER_DROP_RPM_S = 3000;
+/** Pedal above this counts as an open throttle for the 2-step (simcore: closedThrottle). */
+const LAUNCH_MIN_PEDAL = 0.02;
 
 const RPM_RISE_TIME_S = 0.45;
 const RPM_FALL_TIME_S = 0.9;
@@ -73,6 +80,8 @@ export class FakeEngine {
   private iat_C = IAT_AMBIENT_C;
   private limiterCut = false;
   private sweep: SweepState | null = null;
+  private launch: LaunchSettings = { enabled: false, launch_rpm: 4000, retard_deg: 0 };
+  private launchSwitch = false;
 
   constructor(engine: EngineInfo, reference: TableSet, seed: number) {
     this.engine = engine;
@@ -84,6 +93,14 @@ export class FakeEngine {
 
   setPedal(value: number): void {
     this.pedal = clamp01(value);
+  }
+
+  setLaunch(settings: LaunchSettings): void {
+    this.launch = { ...settings };
+  }
+
+  setLaunchSwitch(held: boolean): void {
+    this.launchSwitch = held;
   }
 
   setTune(tune: TableSet): void {
@@ -136,10 +153,18 @@ export class FakeEngine {
 
   state(): EngineState {
     const effect = tuneEffect(this.tune, this.reference, this.rpm, this.map_kPa);
-    const fuelCut = this.limiterCut || this.overrun();
+    const launchActive = this.launchActive();
+    const sparkCut = launchActive && this.limiterCut;
+    const fuelCut = (this.limiterCut && !launchActive) || this.overrun();
     const golden = goldenAt(this.rpm);
     const friction_Nm = FRICTION_BASE_NM + FRICTION_PER_RPM_NM * this.rpm;
-    const combustion_Nm = fuelCut ? 0 : golden.torque_Nm * this.load() * effect.torqueFactor;
+    const burns = !fuelCut && !sparkCut;
+    const combustion_Nm = burns ? golden.torque_Nm * this.load() * effect.torqueFactor : 0;
+    const mapIgnition_deg = interpolate(
+      requireTable(this.tune, 'ignition'),
+      this.rpm,
+      this.map_kPa,
+    );
     const torque_Nm = combustion_Nm - friction_Nm;
     const airflow_kg_s = golden.airflow_kg_s * (this.map_kPa / golden.map_kPa);
     const lambda = fuelCut ? null : effect.lambda + noise(this.random, LAMBDA_NOISE);
@@ -150,7 +175,7 @@ export class FakeEngine {
       map_kPa: this.map_kPa,
       lambda,
       lambdaTarget: effect.lambdaTarget,
-      ignition_deg: interpolate(requireTable(this.tune, 'ignition'), this.rpm, this.map_kPa),
+      ignition_deg: launchActive ? mapIgnition_deg - this.launch.retard_deg : mapIgnition_deg,
       torque_Nm,
       power_kW: powerFromTorque_kW(torque_Nm, this.rpm),
       airflow_kg_s,
@@ -160,11 +185,14 @@ export class FakeEngine {
       egt_C: this.egt_C,
       dynoMode: this.sweep !== null ? 'sweep' : 'free',
       sweepProgress: this.sweepProgress,
-      cutActive: this.limiterCut,
+      cutActive: fuelCut && !this.overrun(),
       iat_C: this.iat_C,
       // Rough stand-in: the catalyst sits a little below the exhaust temperature.
       catalyst_C: this.egt_C * CATALYST_SHARE_OF_EGT,
       overrunFueling: false,
+      launchSwitch: this.launchSwitch,
+      launchActive,
+      sparkCut,
     };
   }
 
@@ -189,13 +217,26 @@ export class FakeEngine {
     this.rpm = smoothTowards(this.rpm, target, dt_s, timeConstant);
   }
 
-  /** Fuel-cut limiter with hysteresis, like simcore's ECU (research.md §3). */
+  /**
+   * Limiter with hysteresis, like simcore's ECU (research.md §3): fuel cut at the rev limit,
+   * or spark cut at the launch speed while the 2-step works.
+   */
   private updateLimiter(): void {
-    if (this.rpm >= this.engine.revLimit_rpm) {
+    const limit_rpm = this.launchActive() ? this.launch.launch_rpm : this.engine.revLimit_rpm;
+    if (this.rpm >= limit_rpm) {
       this.limiterCut = true;
-    } else if (this.rpm < this.engine.revLimit_rpm - REVLIMIT_HYSTERESIS_RPM) {
+    } else if (this.rpm < limit_rpm - REVLIMIT_HYSTERESIS_RPM) {
       this.limiterCut = false;
     }
+  }
+
+  private launchActive(): boolean {
+    return (
+      this.launch.enabled &&
+      this.launchSwitch &&
+      this.sweep === null &&
+      this.pedal > LAUNCH_MIN_PEDAL
+    );
   }
 
   private rpmTarget(): number {

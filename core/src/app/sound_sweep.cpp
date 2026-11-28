@@ -47,11 +47,14 @@ double blipScenarioThrottle(double time_s) noexcept {
     return firstBlip || secondBlip ? 1.0 : 0.0;
 }
 
-std::vector<float> renderBlipSound(const EngineDefinition& definition,
-                                   const OverrunSettings& overrun, std::uint32_t sampleRate,
-                                   std::uint32_t seed) {
-    Tune tune = Tune::fromTables(definition.tables);
-    tune.overrun = overrun;
+namespace {
+
+/// Free-running engine (no brake) driven by `inputs(time_s, ecu)`, which returns the throttle
+/// and may set ECU switches; sound rendered in lockstep with the simulation.
+template <typename Inputs>
+std::vector<float> renderFreeRunning(const EngineDefinition& definition, const Tune& tune,
+                                     double duration_s, Inputs inputs, std::uint32_t sampleRate,
+                                     std::uint32_t seed) {
     EngineSimulation simulation(definition, tune);
     SoundRenderer renderer(exhaustLayout(definition), static_cast<float>(sampleRate), seed);
     renderer.setOutput(kFullVolume, false);
@@ -59,16 +62,49 @@ std::vector<float> renderBlipSound(const EngineDefinition& definition,
     const double dt = simulation.timeStep_s();
     const auto framesPerStep =
         static_cast<std::size_t>(std::lround(static_cast<double>(sampleRate) * dt));
-    const auto steps = static_cast<long>(std::lround(kBlipScenarioDuration_s / dt));
+    const auto steps = static_cast<long>(std::lround(duration_s / dt));
     std::vector<float> output;
     std::vector<float> block(framesPerStep * kStereo);
     for (long step = 0; step < steps; ++step) {
-        const double throttle = blipScenarioThrottle(static_cast<double>(step) * dt);
+        const double throttle = inputs(static_cast<double>(step) * dt, simulation.ecu());
         renderer.publish(acousticParams(simulation.step(throttle, 0.0), definition));
         renderer.render(block);
         output.insert(output.end(), block.begin(), block.end());
     }
     return output;
+}
+
+} // namespace
+
+std::vector<float> renderBlipSound(const EngineDefinition& definition,
+                                   const OverrunSettings& overrun, std::uint32_t sampleRate,
+                                   std::uint32_t seed) {
+    Tune tune = Tune::fromTables(definition.tables);
+    tune.overrun = overrun;
+    return renderFreeRunning(
+        definition, tune, kBlipScenarioDuration_s,
+        [](double time_s, Ecu& /*ecu*/) { return blipScenarioThrottle(time_s); }, sampleRate, seed);
+}
+
+LaunchScenarioInputs launchScenarioInputs(double time_s) noexcept {
+    const bool held = time_s >= kLaunchHoldStart_s && time_s < kLaunchRelease_s;
+    const bool launching = time_s >= kLaunchRelease_s && time_s < kLaunchLiftOff_s;
+    return {held || launching ? 1.0 : 0.0, held};
+}
+
+std::vector<float> renderLaunchSound(const EngineDefinition& definition,
+                                     const LaunchSettings& launch, std::uint32_t sampleRate,
+                                     std::uint32_t seed) {
+    Tune tune = Tune::fromTables(definition.tables);
+    tune.launch = launch;
+    return renderFreeRunning(
+        definition, tune, kLaunchScenarioDuration_s,
+        [](double time_s, Ecu& ecu) {
+            const LaunchScenarioInputs inputs = launchScenarioInputs(time_s);
+            ecu.setLaunchSwitch(inputs.launchSwitch);
+            return inputs.throttle;
+        },
+        sampleRate, seed);
 }
 
 } // namespace simcore

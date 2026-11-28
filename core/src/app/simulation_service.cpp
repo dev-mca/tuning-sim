@@ -78,6 +78,23 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                        // Everyone sees the new settings (several UIs may be connected).
                        publisher_.send({"", "", OverrunSettingsData{command.settings}});
                    },
+                   [&](const GetLaunchSettings&) {
+                       reply(incoming, LaunchSettingsData{simulation_.ecu().tune().launch});
+                   },
+                   [&](const SetLaunchSettings& command) {
+                       if (const std::string error = validateLaunchSettings(command.settings);
+                           !error.empty()) {
+                           reply(incoming, ErrorReply{error});
+                           return;
+                       }
+                       simulation_.ecu().tune().launch = command.settings;
+                       reply(incoming, Ack{});
+                       publisher_.send({"", "", LaunchSettingsData{command.settings}});
+                   },
+                   [&](const SetLaunchSwitch& command) {
+                       launchSwitch_ = command.held;
+                       reply(incoming, Ack{});
+                   },
                    [&](const SetAudio& command) {
                        if (sound_ != nullptr) {
                            sound_->setOutput(command.volume, command.muted);
@@ -145,6 +162,8 @@ Table2D* SimulationService::findEditableTable(const std::string& tableId) {
 }
 
 void SimulationService::advance() {
+    // On the engine dyno the brake holds the speed, so a 2-step makes no sense there.
+    simulation_.ecu().setLaunchSwitch(launchSwitch_ && !sweep_);
     if (!sweep_) {
         publish(simulation_.step(pedal_, 0.0)); // free running, no brake
         return;
@@ -183,6 +202,9 @@ void SimulationService::publish(const SimulationState& state) {
     snapshot.fuelCut = state.command.fuelCut;
     snapshot.overrunFueling = state.command.overrunFueling;
     snapshot.catalystTemperature_K = state.catalystTemperature_K;
+    snapshot.launchSwitch = simulation_.ecu().launchSwitch();
+    snapshot.launchActive = state.command.launchActive;
+    snapshot.sparkCut = state.command.sparkCut;
     publisher_.publishState(snapshot);
 }
 

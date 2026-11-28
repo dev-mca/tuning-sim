@@ -10,6 +10,7 @@ const KNOWN_TYPES: ReadonlySet<string> = new Set<ServerMessage['type']>([
   'dynoProgress',
   'dynoResult',
   'overrunSettings',
+  'launchSettings',
 ]);
 
 export type ParseResult =
@@ -81,6 +82,11 @@ const REQUIRED_FIELDS: Readonly<
     ['fuelCut', 'boolean'],
     ['retard_deg', 'number'],
     ['enrichment_pct', 'number'],
+  ],
+  launchSettings: [
+    ['enabled', 'boolean'],
+    ['launch_rpm', 'number'],
+    ['retard_deg', 'number'],
   ],
   dynoResult: [
     ['rpm', 'array'],

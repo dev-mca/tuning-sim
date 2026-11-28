@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { ConnectionStatus, SourceKind } from '../../sim/SimSource.ts';
 import { useSnapshot, useStore } from '../../state/StoreContext.ts';
+import { isTypingTarget } from '../keyboard.ts';
 import { useAnimationFrame } from '../useAnimationFrame.ts';
 import { AudioControl } from './AudioControl.tsx';
 
@@ -14,17 +15,6 @@ const STATUS_STYLE: Record<ConnectionStatus, { dot: string; text: string }> = {
   connecting: { dot: 'bg-warn animate-pulse', text: 'connecting…' },
   disconnected: { dot: 'bg-muted', text: 'disconnected' },
 };
-
-/** Keys typed into inputs or the table editor must not blip the throttle. */
-function isTypingTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLSelectElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLCanvasElement ||
-    target instanceof HTMLButtonElement
-  );
-}
 
 /** Bottom bar: pedal, throttle blip, connection state and the simulated clock. */
 export function ControlBar({ onSourceChange }: { onSourceChange: (kind: SourceKind) => void }) {
@@ -95,7 +85,11 @@ export function ControlBar({ onSourceChange }: { onSourceChange: (kind: SourceKi
         <kbd className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-ink">
           M
         </kbd>{' '}
-        mutes
+        mutes,{' '}
+        <kbd className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-ink">
+          L
+        </kbd>{' '}
+        holds the launch button
       </p>
       <div className="ml-auto flex items-center gap-3 font-mono text-xs text-muted">
         <span ref={clockRef} className="tabular-nums" />

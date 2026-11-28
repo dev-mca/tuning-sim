@@ -1,4 +1,10 @@
-import type { CellValue, OverrunSettings, TableData, TableId } from '../protocol/messages.ts';
+import type {
+  CellValue,
+  LaunchSettings,
+  OverrunSettings,
+  TableData,
+  TableId,
+} from '../protocol/messages.ts';
 
 /**
  * Tune file: the editable ECU tables of one engine as JSON (ADR 0006). The axes are stored
@@ -23,6 +29,8 @@ export interface TuneFile {
   tables: Record<TableId, TuneTable>;
   /** ECU overrun (pops & bangs) settings; optional, older tune files have none. */
   overrun?: OverrunSettings;
+  /** Launch control (2-step) settings; optional, since iteration 7c. */
+  launch?: LaunchSettings;
 }
 
 /** A tune file that cannot be used; the message is shown to the user. */
@@ -36,6 +44,7 @@ export function createTuneFile(
   tables: Iterable<TableData>,
   savedAt: Date,
   overrun?: OverrunSettings,
+  launch?: LaunchSettings,
 ): TuneFile {
   const entries = [...tables]
     .filter((table) => table.editable)
@@ -55,6 +64,7 @@ export function createTuneFile(
     savedAt: savedAt.toISOString(),
     tables: Object.fromEntries(entries),
     ...(overrun === undefined ? {} : { overrun: { ...overrun } }),
+    ...(launch === undefined ? {} : { launch: { ...launch } }),
   };
 }
 
@@ -93,6 +103,9 @@ export function parseTuneFile(text: string): TuneFile {
   }
   if (data.overrun !== undefined && !isOverrunSettings(data.overrun)) {
     throw new TuneFileError('overrun settings are malformed');
+  }
+  if (data.launch !== undefined && !isLaunchSettings(data.launch)) {
+    throw new TuneFileError('launch settings are malformed');
   }
   return data as unknown as TuneFile;
 }
@@ -186,6 +199,17 @@ function isOverrunSettings(value: unknown): value is OverrunSettings {
     Number.isFinite(value.retard_deg) &&
     typeof value.enrichment_pct === 'number' &&
     Number.isFinite(value.enrichment_pct)
+  );
+}
+
+function isLaunchSettings(value: unknown): value is LaunchSettings {
+  return (
+    isRecord(value) &&
+    typeof value.enabled === 'boolean' &&
+    typeof value.launch_rpm === 'number' &&
+    Number.isFinite(value.launch_rpm) &&
+    typeof value.retard_deg === 'number' &&
+    Number.isFinite(value.retard_deg)
   );
 }
 

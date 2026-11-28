@@ -22,11 +22,13 @@ address goes into `ui/.env.local` as `VITE_SIMCORE_URL=ws://127.0.0.1:47801`.
 
 ```bash
 ./build/debug/core/simcore        # from the repository root, in a second terminal
-cd ui && npm run test:e2e         # retard ignition by 5 deg, check that torque drops
+cd ui && npm run test:e2e         # retard ignition by 5 deg (torque drops), 2-step holds 4000
 ```
 
 Tunes are saved and loaded with the buttons at the top right (JSON, ADR 0006); they include
-the overrun settings of the "Overrun · pops & bangs" panel (ADR 0008).
+the overrun settings of the "Overrun · pops & bangs" panel (ADR 0008) and the launch settings
+of the "Launch control · 2-step" panel (ADR 0014). Hold `L` (or the Launch button) with full
+throttle for the 2-step; release to launch.
 
 ## Structure (iterations 5 and 6, ADR 0005/0006)
 

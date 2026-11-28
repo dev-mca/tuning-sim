@@ -221,3 +221,55 @@ describe('FakeSimSource overrun settings', () => {
     });
   });
 });
+
+describe('FakeSimSource launch control', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reports, validates, stores and broadcasts launch settings', () => {
+    const { source, messages } = connectedSource();
+    send(source, { type: 'getLaunchSettings', id: 'g', payload: {} });
+    send(source, {
+      type: 'setLaunchSettings',
+      id: 'bad',
+      payload: { enabled: true, launch_rpm: 9000, retard_deg: 10 },
+    });
+    send(source, {
+      type: 'setLaunchSettings',
+      id: 'ok',
+      payload: { enabled: true, launch_rpm: 4000, retard_deg: 10 },
+    });
+    vi.advanceTimersByTime(0);
+    const settings = ofType(messages, 'launchSettings');
+    expect(settings[0]?.id).toBe('g');
+    expect(settings[0]?.payload.enabled).toBe(false);
+    expect(ofType(messages, 'error').map((error) => error.id)).toEqual(['bad']);
+    expect(settings.at(-1)?.payload).toEqual({ enabled: true, launch_rpm: 4000, retard_deg: 10 });
+  });
+
+  it('holds the launch speed at full pedal while the button is held', () => {
+    const { source, messages } = connectedSource();
+    send(source, {
+      type: 'setLaunchSettings',
+      payload: { enabled: true, launch_rpm: 4000, retard_deg: 10 },
+    });
+    send(source, { type: 'setLaunchSwitch', payload: { held: true } });
+    send(source, { type: 'setPedal', payload: { value: 1 } });
+    vi.advanceTimersByTime(4000);
+    const held = ofType(messages, 'state').at(-1)?.payload;
+    expect(held?.launchActive).toBe(true);
+    expect(held?.rpm).toBeGreaterThan(3700);
+    expect(held?.rpm).toBeLessThan(4150);
+
+    send(source, { type: 'setLaunchSwitch', payload: { held: false } });
+    vi.advanceTimersByTime(3000);
+    const released = ofType(messages, 'state').at(-1)?.payload;
+    expect(released?.launchActive).toBe(false);
+    expect(released?.rpm).toBeGreaterThan(6000);
+  });
+});

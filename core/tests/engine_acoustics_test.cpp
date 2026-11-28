@@ -95,3 +95,21 @@ TEST_CASE("afterburn needs fuel in overrun, late combustion and a hot catalyst")
     state.catalystTemperature_K = kPopLightOff_K - 1.0; // cold catalyst
     CHECK(acousticParams(state, definition).afterburnRate == 0.0);
 }
+
+TEST_CASE("2-step spark cut sounds like a cut and bangs with a hot catalyst") {
+    const EngineDefinition& definition = test::referenceEngine().definition;
+    SimulationState state = settledState(1.0, 500);
+    state.command.launchActive = true;
+    state.command.sparkCut = true;
+    state.engine.lateCombustionFraction = 1.0;
+    state.catalystTemperature_K = kPopFullyHot_K;
+    const acoustic::AcousticParams params = acousticParams(state, definition);
+    CHECK(params.fuelCut); // no combustion pulses while the spark is cut
+    CHECK(params.afterburnRate == doctest::Approx(kAfterburnEventShare));
+
+    state.command.sparkCut = false; // firing phase of the 2-step: burns in the cylinder
+    state.command.fuelCut = false;
+    state.engine.lateCombustionFraction = 0.0;
+    CHECK_FALSE(acousticParams(state, definition).fuelCut);
+    CHECK(acousticParams(state, definition).afterburnRate == 0.0);
+}

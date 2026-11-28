@@ -46,8 +46,18 @@ struct SetOverrunSettings {
     OverrunSettings settings; // SI: enrichment as fraction
 };
 
+struct GetLaunchSettings {};
+struct SetLaunchSettings {
+    LaunchSettings settings; // SI: launch speed in rad/s
+};
+/// The driver's launch button (2-step, research.md §3.4); like the pedal a live input.
+struct SetLaunchSwitch {
+    bool held;
+};
+
 using Command = std::variant<SetPedal, StartSweep, StopSweep, GetTable, SetTableCells, SetAudio,
-                             GetOverrunSettings, SetOverrunSettings>;
+                             GetOverrunSettings, SetOverrunSettings, GetLaunchSettings,
+                             SetLaunchSettings, SetLaunchSwitch>;
 
 struct IncomingCommand {
     std::string clientId;
@@ -77,8 +87,12 @@ struct OverrunSettingsData {
     OverrunSettings settings;
 };
 
-using OutgoingPayload =
-    std::variant<Ack, ErrorReply, TableData, DynoProgress, DynoResult, OverrunSettingsData>;
+struct LaunchSettingsData {
+    LaunchSettings settings;
+};
+
+using OutgoingPayload = std::variant<Ack, ErrorReply, TableData, DynoProgress, DynoResult,
+                                     OverrunSettingsData, LaunchSettingsData>;
 
 struct OutgoingMessage {
     std::string clientId; // empty = broadcast to all clients
@@ -108,6 +122,9 @@ struct StateSnapshot {
     bool fuelCut = false;
     bool overrunFueling = false; // fuelling in overrun with the cut switched off (pops possible)
     double catalystTemperature_K = 0.0;
+    bool launchSwitch = false; // launch button held (ignored during a dyno sweep)
+    bool launchActive = false; // launch control works (enabled, switch held, throttle open)
+    bool sparkCut = false;     // launch control cuts the spark right now
 };
 
 } // namespace simcore

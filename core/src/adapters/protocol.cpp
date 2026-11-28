@@ -87,6 +87,17 @@ Command decodeCommand(const std::string& type, const json& payload,
                                    payload.at("retard_deg").get<double>(),
                                    payload.at("enrichment_pct").get<double>() / kPercent}};
     }
+    if (type == "getLaunchSettings") {
+        return GetLaunchSettings{};
+    }
+    if (type == "setLaunchSettings") {
+        return SetLaunchSettings{{payload.at("enabled").get<bool>(),
+                                  units::rpmToRadS(payload.at("launch_rpm").get<double>()),
+                                  payload.at("retard_deg").get<double>()}};
+    }
+    if (type == "setLaunchSwitch") {
+        return SetLaunchSwitch{payload.at("held").get<bool>()};
+    }
     if (type == "stopSweep") {
         return StopSweep{};
     }
@@ -187,7 +198,10 @@ std::string ProtocolCodec::encodeState(const StateSnapshot& state) const {
                      {"sweepProgress", state.sweepProgress},
                      {"cutActive", state.fuelCut},
                      {"overrunFueling", state.overrunFueling},
-                     {"catalyst_C", units::kelvinToCelsius(state.catalystTemperature_K)}});
+                     {"catalyst_C", units::kelvinToCelsius(state.catalystTemperature_K)},
+                     {"launchSwitch", state.launchSwitch},
+                     {"launchActive", state.launchActive},
+                     {"sparkCut", state.sparkCut}});
 }
 
 std::string ProtocolCodec::encodeError(const std::string& requestId,
@@ -212,6 +226,12 @@ std::string ProtocolCodec::encode(const OutgoingMessage& message) const {
                                 {{"fuelCut", data.settings.fuelCut},
                                  {"retard_deg", data.settings.retard_deg},
                                  {"enrichment_pct", data.settings.enrichment * kPercent}});
+            },
+            [&](const LaunchSettingsData& data) {
+                return envelope("launchSettings", message.requestId,
+                                {{"enabled", data.settings.enabled},
+                                 {"launch_rpm", units::radSToRpm(data.settings.launchSpeed_rad_s)},
+                                 {"retard_deg", data.settings.retard_deg}});
             },
             [&](const TableData& data) {
                 const TableDescriptor* table = descriptor(data.tableId);

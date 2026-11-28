@@ -43,6 +43,7 @@ private:
     EngineSimulation simulation_;
     std::vector<TableDescriptor> tables_;
     double pedal_ = 0.0;
+    bool launchSwitch_ = false; // as sent by the UI; the ECU sees it only without a sweep
     std::optional<SweepRun> sweep_;
     long stepsSinceProgress_ = 0;
 };
