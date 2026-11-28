@@ -4,7 +4,9 @@
 
 #include "adapters/sweep_csv.hpp"
 #include "domain/common/units.hpp"
+#include "domain/drivetrain/car_simulation.hpp"
 #include "domain/dyno/dyno.hpp"
+#include "domain/dyno/roller.hpp"
 #include "domain/ecu/ecu.hpp"
 #include "domain/engine/engine_simulation.hpp"
 #include "test_support.hpp"
@@ -59,6 +61,18 @@ Csv readCsv(const std::string& path) {
         csv.rows.push_back(row);
     }
     return csv;
+}
+
+void checkRow(const Csv& golden, std::size_t row, const std::vector<std::string>& columns,
+              const std::vector<double>& actual) {
+    REQUIRE(row < golden.rows.size());
+    for (std::size_t c = 0; c < actual.size(); ++c) {
+        const double expected = golden.rows[row][c];
+        const double tolerance = kAbsoluteTolerance + kRelativeTolerance * std::abs(expected);
+        CAPTURE(row);
+        CAPTURE(columns[c]);
+        CHECK(std::abs(actual[c] - expected) <= tolerance);
+    }
 }
 
 } // namespace
@@ -177,6 +191,71 @@ TEST_CASE("launch control (2-step) matches the Python golden file (research.md �
             CAPTURE(columns[c]);
             CHECK(std::abs(actual[c] - expected) <= tolerance);
         }
+        ++row;
+    }
+    CHECK(row == golden.rows.size());
+}
+
+TEST_CASE("roller dyno run in 4th gear matches the Python golden file (research.md §8.4)") {
+    const Csv golden = readCsv(test::sharedDir() + "/golden/i6_30_na_roller.csv");
+    const std::vector<std::string> columns = {
+        "time_s",         "speed_rpm",     "vehicleSpeed_kmh", "wheelForce_N",
+        "wheelTorque_Nm", "wheelPower_kW", "engineTorque_Nm"};
+    REQUIRE(golden.header == columns);
+    // Same run as ROLLER_* in lab/src/tuning_lab/golden.py.
+    const std::vector<RollerSample> samples =
+        runRoller(test::referenceEngine().definition, {4, 1500.0, 6800.0});
+    REQUIRE(samples.size() == golden.rows.size());
+    for (std::size_t row = 0; row < samples.size(); ++row) {
+        const RollerSample& s = samples[row];
+        checkRow(golden, row, columns,
+                 {s.time_s, units::radSToRpm(s.speed_rad_s), units::msToKmh(s.vehicleSpeed_m_s),
+                  s.wheelForce_N, s.wheelTorque_Nm, units::wToKw(s.wheelPower_W()),
+                  s.engineTorque_Nm});
+    }
+}
+
+TEST_CASE("launch and flat-shifted drive match the Python golden file (research.md §8)") {
+    const Csv golden = readCsv(test::sharedDir() + "/golden/i6_30_na_drive.csv");
+    const std::vector<std::string> columns = {
+        "time_s",           "speed_rpm",       "vehicleSpeed_kmh", "gear",
+        "clutchEngagement", "clutchLocked",    "launchActive",     "sparkCut",
+        "flatShift",        "clutchTorque_Nm", "catalyst_degC"};
+    REQUIRE(golden.header == columns);
+    // Same scenario as DRIVE_* in lab/src/tuning_lab/golden.py.
+    const EngineDefinition& engine = test::referenceEngine().definition;
+    Tune tune = Tune::fromTables(engine.tables);
+    tune.launch = {true, units::rpmToRadS(4000.0), 10.0, true};
+    CarSimulation car(engine, tune);
+    car.drivetrain().setClutchPedal(true);
+    static_cast<void>(car.drivetrain().shift(1));
+    constexpr int kSteps = 10000;
+    constexpr int kClutchUpStep = 2500;
+    constexpr int kThrottleStep = 500;
+    constexpr int kSampleSteps = 50;
+    constexpr double kShift_rpm = 6500.0;
+    constexpr int kTopGear = 3;
+    std::size_t row = 0;
+    for (int step = 0; step < kSteps; ++step) {
+        if (step == kClutchUpStep) {
+            car.drivetrain().setClutchPedal(false);
+        }
+        const CarState state = car.step(step >= kThrottleStep ? 1.0 : 0.0);
+        const DrivetrainState& d = state.drivetrain;
+        if (units::radSToRpm(state.engine.speed_rad_s) >= kShift_rpm &&
+            d.clutchState == ClutchState::Locked && d.gear >= 1 && d.gear < kTopGear) {
+            static_cast<void>(car.drivetrain().shift(d.gear + 1));
+        }
+        if ((step + 1) % kSampleSteps != 0) {
+            continue;
+        }
+        const EcuCommand& c = state.engine.command;
+        checkRow(golden, row, columns,
+                 {state.engine.time_s, units::radSToRpm(state.engine.speed_rad_s),
+                  units::msToKmh(d.vehicleSpeed_m_s), static_cast<double>(d.gear),
+                  d.clutchEngagement, d.clutchState == ClutchState::Locked ? 1.0 : 0.0,
+                  c.launchActive ? 1.0 : 0.0, c.sparkCut ? 1.0 : 0.0, c.flatShiftActive ? 1.0 : 0.0,
+                  d.clutchTorque_Nm, units::kelvinToCelsius(state.engine.catalystTemperature_K)});
         ++row;
     }
     CHECK(row == golden.rows.size());

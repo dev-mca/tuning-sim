@@ -26,6 +26,19 @@ export function kwToPs(power_kW: number): number {
   return power_kW / KW_PER_PS;
 }
 
+const SECONDS_PER_MINUTE = 60;
+const KMH_PER_METRE_PER_SECOND = 3.6;
+
+/** Engine speed [1/min] to angular velocity [rad/s] (research.md §0). */
+export function rpmToRadS(speed_rpm: number): number {
+  return (speed_rpm * 2 * Math.PI) / SECONDS_PER_MINUTE;
+}
+
+/** Vehicle speed [m/s] to [km/h]. */
+export function msToKmh(speed_m_s: number): number {
+  return speed_m_s * KMH_PER_METRE_PER_SECOND;
+}
+
 /** Significant digits kept for display; removes noise such as 1100.0000000000002 rpm. */
 const DISPLAY_PRECISION = 10;
 

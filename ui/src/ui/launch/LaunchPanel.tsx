@@ -15,8 +15,13 @@ const MAX_RETARD_DEG = 30;
 /** Key that holds the launch button (like pressing the clutch while standing). */
 const LAUNCH_KEY = 'l';
 
-const STOCK: LaunchSettings = { enabled: false, launch_rpm: 4000, retard_deg: 0 };
-const TWO_STEP: LaunchSettings = { enabled: true, launch_rpm: 4000, retard_deg: 10 };
+const STOCK: LaunchSettings = { enabled: false, launch_rpm: 4000, retard_deg: 0, flatShift: false };
+const TWO_STEP: LaunchSettings = {
+  enabled: true,
+  launch_rpm: 4000,
+  retard_deg: 10,
+  flatShift: true,
+};
 
 /**
  * Launch control / 2-step (research.md §3.4): while the launch button is held and the throttle
@@ -81,8 +86,8 @@ export function LaunchPanel() {
 
   return (
     <Panel
-      title="Launch control · 2-step"
-      subtitle="Hold the launch button and floor it: the ECU holds the launch speed"
+      title="Launch control · 2-step · flat shift"
+      subtitle="Hold the launch button or the clutch while standing and floor it"
       actions={
         <div className="flex gap-1.5">
           <Button
@@ -100,9 +105,9 @@ export function LaunchPanel() {
             onClick={() => {
               store.setLaunch(TWO_STEP);
             }}
-            title="2-step at 4000 1/min with 10 deg retard"
+            title="2-step at 4000 1/min with 10 deg retard, flat shift on"
           >
-            2-step
+            2-step + flat shift
           </Button>
         </div>
       }
@@ -119,6 +124,18 @@ export function LaunchPanel() {
             className="size-4 accent-accent"
           />
           Launch control
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={launch?.flatShift ?? false}
+            disabled={disabled}
+            onChange={(event) => {
+              change({ flatShift: event.target.checked });
+            }}
+            className="size-4 accent-accent"
+          />
+          Flat shift (cut the spark while shifting at full throttle)
         </label>
         <Slider
           label="Launch speed"

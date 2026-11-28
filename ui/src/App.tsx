@@ -12,6 +12,7 @@ import { GaugeCluster } from './ui/gauges/GaugeCluster.tsx';
 import { ConnectionBanner } from './ui/layout/ConnectionBanner.tsx';
 import { Toast } from './ui/layout/Toast.tsx';
 import { Map3dPanel } from './ui/map3d/Map3dPanel.tsx';
+import { DrivetrainPanel } from './ui/drivetrain/DrivetrainPanel.tsx';
 import { LaunchPanel } from './ui/launch/LaunchPanel.tsx';
 import { OverrunPanel } from './ui/overrun/OverrunPanel.tsx';
 import { TablePanel } from './ui/table/TablePanel.tsx';
@@ -76,6 +77,7 @@ function Cockpit({ onSourceChange }: { onSourceChange: (kind: SourceKind) => voi
       <main className="grid flex-1 grid-cols-1 gap-4 xl:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-4">
           <TablePanel />
+          <DrivetrainPanel />
           <OverrunPanel />
           <LaunchPanel />
         </div>

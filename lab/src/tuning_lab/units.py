@@ -70,3 +70,17 @@ def celsius_to_kelvin[T: (float, FloatArray)](temperature_c: T) -> T:
 def kelvin_to_celsius[T: (float, FloatArray)](temperature_k: T) -> T:
     """Temperature [K] to [°C]."""
     return temperature_k - KELVIN_OFFSET
+
+
+KMH_PER_METRE_PER_SECOND = 3.6
+"""1 m/s = 3.6 km/h."""
+
+
+def ms_to_kmh[T: (float, FloatArray)](speed_m_s: T) -> T:
+    """Vehicle speed [m/s] to [km/h]."""
+    return speed_m_s * KMH_PER_METRE_PER_SECOND
+
+
+def kmh_to_ms[T: (float, FloatArray)](speed_kmh: T) -> T:
+    """Vehicle speed [km/h] to [m/s]."""
+    return speed_kmh / KMH_PER_METRE_PER_SECOND

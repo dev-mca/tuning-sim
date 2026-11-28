@@ -46,6 +46,8 @@ class LaunchSettings:
     """Speed the ECU holds by cutting the spark while the launch switch is held."""
     retard_deg: float = 0.0
     """Ignition taken back from the map while launch control is active, deg."""
+    flat_shift: bool = False
+    """Flat shift: cut the spark during an upshift at open throttle (research.md §3.4)."""
 
 
 @dataclass(frozen=True)
@@ -78,7 +80,9 @@ class EcuCommand:
     launch_active: bool = False
     """True while launch control works (enabled, switch held, throttle open)."""
     spark_cut: bool = False
-    """True while launch control cuts the spark but keeps injecting."""
+    """True while launch control or flat shift cuts the spark but keeps injecting."""
+    flat_shift_active: bool = False
+    """True while flat shift cuts the spark during a shift."""
 
 
 class Ecu:
@@ -100,6 +104,11 @@ class Ecu:
         self._in_overrun = False
         self._launch_switch = False
         self._launch_cut = False
+        self._shift_cut_request = False
+
+    def set_shift_cut_request(self, requested: bool) -> None:
+        """The gearbox interrupts the torque for a shift (iteration 10)."""
+        self._shift_cut_request = requested
 
     def set_launch_switch(self, held: bool) -> None:
         """The driver's launch button (later: clutch pedal while standing, iteration 10)."""
@@ -115,6 +124,13 @@ class Ecu:
         self._update_rev_limiter(speed_rad_s)
         self._update_overrun(speed_rad_s, throttle)
         launch_active = self._update_launch(speed_rad_s, throttle)
+        # Flat shift: keep the throttle open during an upshift, the spark cut keeps the engine
+        # from flaring up while the clutch is open (research.md §3.4).
+        flat_shift_active = (
+            self._tune.launch.flat_shift
+            and self._shift_cut_request
+            and throttle > self._overrun.closed_throttle
+        )
         overrun = self._tune.overrun
         lambda_target = self._tune.lambda_target.lookup(speed_rad_s, manifold_pressure_pa)
         ignition_deg = self._tune.ignition.lookup(speed_rad_s, manifold_pressure_pa)
@@ -142,7 +158,8 @@ class Ecu:
             fuel_cut=False,
             overrun_fueling=self._in_overrun,
             launch_active=launch_active,
-            spark_cut=launch_active and self._launch_cut,
+            spark_cut=(launch_active and self._launch_cut) or flat_shift_active,
+            flat_shift_active=flat_shift_active,
         )
 
     def _update_launch(self, speed_rad_s: float, throttle: float) -> bool:

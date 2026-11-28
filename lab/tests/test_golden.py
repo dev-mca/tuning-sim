@@ -2,19 +2,26 @@
 
 import csv
 import io
+from collections.abc import Callable
 
 import pytest
 
 from tuning_lab.golden import (
     COLUMNS,
+    DRIVE_COLUMNS,
+    DRIVE_FILE_NAME,
     I6_30_NA_SWEEP,
     LAUNCH_COLUMNS,
     LAUNCH_FILE_NAME,
     OVERRUN_COLUMNS,
     OVERRUN_FILE_NAME,
+    ROLLER_COLUMNS,
+    ROLLER_FILE_NAME,
+    render_drive_csv,
     render_golden_csv,
     render_launch_csv,
     render_overrun_csv,
+    render_roller_csv,
 )
 from tuning_lab.paths import GOLDEN_DIR
 
@@ -61,4 +68,25 @@ def test_launch_golden_file_is_up_to_date() -> None:
     for row, fresh in zip(rows, fresh_rows, strict=True):
         assert row == pytest.approx(fresh, rel=RELATIVE_TOLERANCE, abs=1.0e-6), (
             "launch golden file outdated: run `python -m tuning_lab.golden`"
+        )
+
+
+@pytest.mark.parametrize(
+    ("file_name", "columns", "render", "row_count"),
+    [
+        (ROLLER_FILE_NAME, ROLLER_COLUMNS, render_roller_csv, 54),  # 1500..6800 per 100 1/min
+        (DRIVE_FILE_NAME, DRIVE_COLUMNS, render_drive_csv, 200),  # 10 s, one row every 50 ms
+    ],
+)
+def test_drivetrain_golden_files_are_up_to_date(
+    file_name: str, columns: tuple[str, ...], render: Callable[[], str], row_count: int
+) -> None:
+    committed = (GOLDEN_DIR / file_name).read_text(encoding="utf-8")
+    header, rows = parse(committed)
+    fresh_header, fresh_rows = parse(render())
+    assert header == list(columns) == fresh_header
+    assert len(rows) == len(fresh_rows) == row_count
+    for row, fresh in zip(rows, fresh_rows, strict=True):
+        assert row == pytest.approx(fresh, rel=RELATIVE_TOLERANCE, abs=1.0e-6), (
+            f"{file_name} outdated: run `python -m tuning_lab.golden`"
         )

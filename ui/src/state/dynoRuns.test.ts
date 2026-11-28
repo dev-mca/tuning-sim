@@ -4,6 +4,8 @@ import type { DynoResultPayload } from '../protocol/messages.ts';
 import { addRun, MAX_RUNS, peakOf, removeRun, toggleRun } from './dynoRuns.ts';
 
 const result: DynoResultPayload = {
+  kind: 'engine',
+  gear: null,
   rpm: [1000, 2000, 3000],
   torque_Nm: [250, 300, 280],
   power_kW: [26, 63, 88],

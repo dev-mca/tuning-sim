@@ -112,3 +112,12 @@ export function referenceTables(): TableData[] {
 }
 
 export const GOLDEN_SWEEP: readonly GoldenPoint[] = parseGoldenSweep(goldenSweepCsv);
+
+/** Gearbox of the reference car (iteration 10); the fake only uses it for the speed display. */
+export const REFERENCE_DRIVETRAIN = {
+  gearRatios: engineDefinition.drivetrain.gearRatios,
+  finalDriveRatio: engineDefinition.drivetrain.finalDriveRatio,
+  efficiency: engineDefinition.drivetrain.efficiency,
+  wheelRadius_m: engineDefinition.drivetrain.wheelRadius_m,
+  launchMaxSpeed_kmh: engineDefinition.drivetrain.launchMaxSpeed_kmh,
+} as const;

@@ -5,7 +5,7 @@
  * the right magnitude and react to pedal and tables. Real physics lives in simcore.
  */
 import { interpolate } from '../../domain/table2d.ts';
-import { STOICHIOMETRIC_AFR_GASOLINE } from '../../domain/units.ts';
+import { msToKmh, rpmToRadS, STOICHIOMETRIC_AFR_GASOLINE } from '../../domain/units.ts';
 import type {
   EngineInfo,
   EngineState,
@@ -21,7 +21,7 @@ import {
   tuneEffect,
 } from './fakeDyno.ts';
 import { createRandom, noise } from './random.ts';
-import { REVLIMIT_HYSTERESIS_RPM } from './referenceData.ts';
+import { REFERENCE_DRIVETRAIN, REVLIMIT_HYSTERESIS_RPM } from './referenceData.ts';
 
 /** Manifold pressure at idle and at wide-open throttle of the NA reference engine. */
 const MAP_IDLE_KPA = 30;
@@ -80,8 +80,15 @@ export class FakeEngine {
   private iat_C = IAT_AMBIENT_C;
   private limiterCut = false;
   private sweep: SweepState | null = null;
-  private launch: LaunchSettings = { enabled: false, launch_rpm: 4000, retard_deg: 0 };
+  private launch: LaunchSettings = {
+    enabled: false,
+    launch_rpm: 4000,
+    retard_deg: 0,
+    flatShift: false,
+  };
   private launchSwitch = false;
+  private gear = 0;
+  private clutchPressed = false;
 
   constructor(engine: EngineInfo, reference: TableSet, seed: number) {
     this.engine = engine;
@@ -101,6 +108,25 @@ export class FakeEngine {
 
   setLaunchSwitch(held: boolean): void {
     this.launchSwitch = held;
+  }
+
+  /** No shift physics in the fake: the gear changes at once. */
+  shift(gear: number): boolean {
+    if (gear < 0 || gear > REFERENCE_DRIVETRAIN.gearRatios.length || this.sweep !== null) {
+      return false;
+    }
+    this.gear = gear;
+    return true;
+  }
+
+  setClutch(pressed: boolean): void {
+    this.clutchPressed = pressed;
+  }
+
+  /** Roller run: in gear with the clutch closed. */
+  placeInGear(gear: number): void {
+    this.gear = gear;
+    this.clutchPressed = false;
   }
 
   setTune(tune: TableSet): void {
@@ -193,15 +219,12 @@ export class FakeEngine {
       launchSwitch: this.launchSwitch,
       launchActive,
       sparkCut,
-      // Naturally aspirated, no gearbox yet: the agreed fields are not available (plan.md §11).
+      // Naturally aspirated: the charging fields are not available (plan.md §11).
       boost_kPa: null,
       turboSpeed_rpm: null,
       wastegateDuty_pct: null,
       knockRetard_deg: 0,
-      gear: null,
-      clutch: null,
-      vehicleSpeed_kmh: null,
-      wheelTorque_Nm: null,
+      ...this.drivetrainState(torque_Nm),
     };
   }
 
@@ -239,10 +262,32 @@ export class FakeEngine {
     }
   }
 
+  /** Rough stand-in: the car moves with the engine whenever a gear is in and the clutch is up. */
+  private drivetrainState(engineTorque_Nm: number): Partial<EngineState> {
+    const ratio = this.overallRatio();
+    const common = { gear: this.gear, clutch: this.clutchPressed ? 0 : 1, shifting: false };
+    if (ratio === null || this.clutchPressed) {
+      return { ...common, vehicleSpeed_kmh: 0, wheelTorque_Nm: 0, clutchLocked: false };
+    }
+    const wheelSpeed_rad_s = rpmToRadS(this.rpm) / ratio;
+    return {
+      ...common,
+      vehicleSpeed_kmh: msToKmh(wheelSpeed_rad_s * REFERENCE_DRIVETRAIN.wheelRadius_m),
+      wheelTorque_Nm: engineTorque_Nm * ratio * REFERENCE_DRIVETRAIN.efficiency,
+      clutchLocked: true,
+    };
+  }
+
+  private overallRatio(): number | null {
+    const gearRatio = REFERENCE_DRIVETRAIN.gearRatios[this.gear - 1];
+    return gearRatio === undefined ? null : gearRatio * REFERENCE_DRIVETRAIN.finalDriveRatio;
+  }
+
   private launchActive(): boolean {
+    const armedByClutch = this.clutchPressed && this.gear > 0;
     return (
       this.launch.enabled &&
-      this.launchSwitch &&
+      (this.launchSwitch || armedByClutch) &&
       this.sweep === null &&
       this.pedal > LAUNCH_MIN_PEDAL
     );

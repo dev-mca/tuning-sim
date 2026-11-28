@@ -94,7 +94,7 @@ export function GaugeCluster() {
             LIMIT
           </span>
           <span
-            className={`rounded px-1.5 py-0.5 ${engineMode.dynoMode === 'sweep' ? 'bg-accent text-canvas' : 'border border-line text-muted'}`}
+            className={`rounded px-1.5 py-0.5 ${engineMode.dynoMode !== 'free' ? 'bg-accent text-canvas' : 'border border-line text-muted'}`}
           >
             DYNO
           </span>

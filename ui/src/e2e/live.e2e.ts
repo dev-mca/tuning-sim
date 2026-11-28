@@ -96,7 +96,7 @@ describe('UI store against a live simcore', () => {
   it(
     'holds the launch speed with the 2-step and revs on after release (iteration 7c)',
     async () => {
-      store.setLaunch({ enabled: true, launch_rpm: 4000, retard_deg: 10 });
+      store.setLaunch({ enabled: true, launch_rpm: 4000, retard_deg: 10, flatShift: false });
       store.setLaunchSwitch(true);
       store.setPedal(1);
       const held = await waitFor('2-step at the launch speed', () => {
@@ -114,6 +114,29 @@ describe('UI store against a live simcore', () => {
         return state !== null && !state.launchActive && state.rpm > 5000;
       });
       store.setPedal(0);
+    },
+    TIMEOUT_MS,
+  );
+
+  it(
+    'drives off on the roller dyno in 1st gear and goes back to neutral (iteration 10)',
+    async () => {
+      await waitFor('neutral', () => store.latestState()?.gear === 0);
+      store.setClutch(true);
+      store.shiftBy(1);
+      await waitFor('1st gear', () => store.latestState()?.gear === 1);
+      store.setPedal(0.6);
+      store.setClutch(false);
+      const moving = await waitFor('the car moving with a locked clutch', () => {
+        const state = store.latestState();
+        return state?.clutchLocked === true && (state.vehicleSpeed_kmh ?? 0) > 10 ? state : null;
+      });
+      expect(moving.wheelTorque_Nm ?? 0).toBeGreaterThan(0);
+      store.setPedal(0);
+      store.setClutch(true);
+      store.shiftBy(-1);
+      await waitFor('neutral again', () => store.latestState()?.gear === 0);
+      store.setClutch(false);
     },
     TIMEOUT_MS,
   );

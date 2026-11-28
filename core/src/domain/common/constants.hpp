@@ -14,6 +14,8 @@ inline constexpr double kAfrStoichGasoline = 14.7;
 inline constexpr double kLowerHeatingValueGasoline_J_kg = 43.0e6;
 inline constexpr double kAmbientPressure_Pa = 101'325.0;
 inline constexpr double kAmbientTemperature_K = 298.15; // 25 degC, also intake manifold
+/// Standard acceleration of gravity (rolling resistance, research.md §8.2).
+inline constexpr double kStandardGravity_m_s2 = 9.80665;
 /// One four-stroke cycle = two revolutions = 4 pi rad (research.md §1.1).
 inline constexpr double kRadiansPerCycle = 4.0 * std::numbers::pi;
 

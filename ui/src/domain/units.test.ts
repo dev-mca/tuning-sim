@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatClean, kwToPs, lambdaToAfr, mapToBoostBar } from './units.ts';
+import { formatClean, kwToPs, lambdaToAfr, mapToBoostBar, msToKmh, rpmToRadS } from './units.ts';
+
+describe('speed conversions', () => {
+  it('converts rpm to rad/s and m/s to km/h', () => {
+    expect(rpmToRadS(60)).toBeCloseTo(2 * Math.PI);
+    expect(msToKmh(10)).toBeCloseTo(36);
+  });
+});
 
 describe('display units', () => {
   it('converts lambda to gasoline AFR', () => {

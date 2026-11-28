@@ -7,6 +7,7 @@
 //   simcore --sound-blips out.wav [--no-overrun-cut] [--overrun-retard 35]
 //                                 [--overrun-enrichment 0.1]     throttle blips with overrun
 //   simcore --sound-launch out.wav [--launch-rpm 4000] [--launch-retard 10]   2-step
+//   simcore --sound-drive out.wav [--no-flat-shift]     launch and upshifts on the rollers
 // Options: --engine <id>, --shared <dir>, --port <n>, --no-audio, --version, --help.
 
 #include "domain/ecu/ecu.hpp"
@@ -17,7 +18,7 @@
 
 namespace simcore {
 
-enum class CliMode { Serve, Sweep, SoundSweep, SoundBlips, SoundLaunch, Version, Help };
+enum class CliMode { Serve, Sweep, SoundSweep, SoundBlips, SoundLaunch, SoundDrive, Version, Help };
 
 /// Range of --sound-sweep: the full speed range of the reference engine.
 inline constexpr double kSoundSweepFrom_rpm = 1000.0;
@@ -42,6 +43,8 @@ struct CliOptions {
     double overrunRetard_deg = 0.0;
     double overrunEnrichment = 0.0;
     std::string soundLaunchFile; // target of --sound-launch
+    std::string soundDriveFile;  // target of --sound-drive
+    bool flatShift = true;       // --no-flat-shift turns it off for --sound-drive
     double launch_rpm = kDefaultLaunch_rpm;
     double launchRetard_deg = kDefaultSoundLaunchRetard_deg;
 };

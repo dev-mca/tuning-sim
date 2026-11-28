@@ -76,6 +76,44 @@ class AfterburnParameters:
 
 
 @dataclass(frozen=True)
+class DrivetrainParameters:
+    """Gearbox, clutch and the car on the roller dyno (research.md §8)."""
+
+    gear_ratios: tuple[float, ...]
+    """i_g of the forward gears, index 0 = 1st gear."""
+    final_drive_ratio: float
+    efficiency: float
+    """eta_dl of gearbox and differential, applied to the torque at the wheels (§8.1)."""
+    wheel_radius_m: float
+    vehicle_mass_kg: float
+    wheel_inertia_kg_m2: float
+    """All wheels, axles and the propshaft, at wheel speed."""
+    drag_area_m2: float
+    """c_w * A."""
+    rolling_resistance: float
+    """c_r."""
+    clutch_max_torque_nm: float
+    clutch_release_time_s: float
+    """Time from pedal up to a fully closed clutch."""
+    shift_time_s: float
+    """Torque interruption of a shift (clutch open, gear changes at its end)."""
+    shift_engage_time_s: float
+    """Clutch closing after a shift."""
+    launch_max_speed_m_s: float
+    """Launch control is armed by the clutch only below this speed (standing car)."""
+    stall_speed_rad_s: float
+    """Below this the engine has stalled; it restarts once the drivetrain is decoupled."""
+
+    @property
+    def gear_count(self) -> int:
+        return len(self.gear_ratios)
+
+    def overall_ratio(self, gear: int) -> float:
+        """i = i_g * i_f from engine to wheels (research.md §8.1); gear 1 = first gear."""
+        return self.gear_ratios[gear - 1] * self.final_drive_ratio
+
+
+@dataclass(frozen=True)
 class EngineDefinition:
     id: str
     name: str
@@ -97,6 +135,7 @@ class EngineDefinition:
     tables: EngineTables
     overrun_cut: OverrunCutParameters
     afterburn: AfterburnParameters
+    drivetrain: DrivetrainParameters
 
     @property
     def displacement_m3(self) -> float:
@@ -178,4 +217,27 @@ def _engine_from_dict(data: dict[str, Any], shared_dir: Path) -> EngineDefinitio
                 float(data["afterburn"]["catalystInitial_C"])
             ),
         ),
+        drivetrain=_drivetrain_from_dict(data["drivetrain"]),
+    )
+
+
+def _drivetrain_from_dict(data: dict[str, Any]) -> DrivetrainParameters:
+    ratios = tuple(float(ratio) for ratio in data["gearRatios"])
+    if not ratios or any(ratio <= 0.0 for ratio in ratios):
+        raise ValueError("gearRatios needs at least one positive ratio")
+    return DrivetrainParameters(
+        gear_ratios=ratios,
+        final_drive_ratio=float(data["finalDriveRatio"]),
+        efficiency=float(data["efficiency"]),
+        wheel_radius_m=float(data["wheelRadius_m"]),
+        vehicle_mass_kg=float(data["vehicleMass_kg"]),
+        wheel_inertia_kg_m2=float(data["wheelInertia_kg_m2"]),
+        drag_area_m2=float(data["dragArea_m2"]),
+        rolling_resistance=float(data["rollingResistance"]),
+        clutch_max_torque_nm=float(data["clutchMaxTorque_Nm"]),
+        clutch_release_time_s=float(data["clutchReleaseTime_s"]),
+        shift_time_s=float(data["shiftTime_s"]),
+        shift_engage_time_s=float(data["shiftEngageTime_s"]),
+        launch_max_speed_m_s=units.kmh_to_ms(float(data["launchMaxSpeed_kmh"])),
+        stall_speed_rad_s=units.rpm_to_rad_s(float(data["stallSpeed_rpm"])),
     )

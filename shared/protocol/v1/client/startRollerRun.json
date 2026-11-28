@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "type": "startRollerRun",
+  "id": "14",
+  "payload": {
+    "gear": 4,
+    "rpmFrom": 1500.0,
+    "rpmTo": 6800.0
+  }
+}

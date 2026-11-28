@@ -22,7 +22,7 @@ struct Overloaded : Ts... {
 
 SimulationService::SimulationService(const LoadedEngine& engine, ICommandSource& commands,
                                      IStatePublisher& publisher, IAcousticSink* sound)
-    : commands_(commands), publisher_(publisher), sound_(sound), simulation_(engine.definition),
+    : commands_(commands), publisher_(publisher), sound_(sound), car_(engine.definition),
       tables_(engine.tables) {}
 
 void SimulationService::step() {
@@ -43,10 +43,16 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                        reply(incoming, Ack{});
                    },
                    [&](const StartSweep& command) {
+                       if (roller_) {
+                           reply(incoming, ErrorReply{"a roller run is in progress"});
+                           return;
+                       }
                        try {
-                           sweep_.emplace(command.parameters, simulation_.definition().inertia_kgm2,
-                                          simulation_.timeStep_s());
+                           sweep_.emplace(command.parameters,
+                                          car_.engine().definition().inertia_kgm2,
+                                          car_.engine().timeStep_s());
                            stepsSinceProgress_ = 0;
+                           car_.drivetrain().setNeutral(); // the brake sits on the crank
                            reply(incoming, Ack{});
                        } catch (const std::invalid_argument& error) {
                            reply(incoming, ErrorReply{error.what()});
@@ -54,6 +60,7 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                    },
                    [&](const StopSweep&) {
                        sweep_.reset();
+                       roller_.reset();
                        reply(incoming, Ack{});
                    },
                    [&](const GetTable& command) {
@@ -65,7 +72,7 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                    },
                    [&](const SetTableCells& command) { applyCells(incoming, command); },
                    [&](const GetOverrunSettings&) {
-                       reply(incoming, OverrunSettingsData{simulation_.ecu().tune().overrun});
+                       reply(incoming, OverrunSettingsData{car_.engine().ecu().tune().overrun});
                    },
                    [&](const SetOverrunSettings& command) {
                        if (const std::string error = validateOverrunSettings(command.settings);
@@ -73,13 +80,13 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                            reply(incoming, ErrorReply{error});
                            return;
                        }
-                       simulation_.ecu().tune().overrun = command.settings;
+                       car_.engine().ecu().tune().overrun = command.settings;
                        reply(incoming, Ack{});
                        // Everyone sees the new settings (several UIs may be connected).
                        publisher_.send({"", "", OverrunSettingsData{command.settings}});
                    },
                    [&](const GetLaunchSettings&) {
-                       reply(incoming, LaunchSettingsData{simulation_.ecu().tune().launch});
+                       reply(incoming, LaunchSettingsData{car_.engine().ecu().tune().launch});
                    },
                    [&](const SetLaunchSettings& command) {
                        if (const std::string error = validateLaunchSettings(command.settings);
@@ -87,7 +94,7 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                            reply(incoming, ErrorReply{error});
                            return;
                        }
-                       simulation_.ecu().tune().launch = command.settings;
+                       car_.engine().ecu().tune().launch = command.settings;
                        reply(incoming, Ack{});
                        publisher_.send({"", "", LaunchSettingsData{command.settings}});
                    },
@@ -95,6 +102,21 @@ void SimulationService::handle(const IncomingCommand& incoming) {
                        launchSwitch_ = command.held;
                        reply(incoming, Ack{});
                    },
+                   [&](const Shift& command) {
+                       if (sweep_ || roller_) {
+                           reply(incoming, ErrorReply{"cannot shift during a dyno run"});
+                       } else if (car_.drivetrain().shift(command.gear)) {
+                           reply(incoming, Ack{});
+                       } else {
+                           reply(incoming, ErrorReply{"cannot shift to gear " +
+                                                      std::to_string(command.gear) + " now"});
+                       }
+                   },
+                   [&](const SetClutch& command) {
+                       car_.drivetrain().setClutchPedal(command.pressed);
+                       reply(incoming, Ack{});
+                   },
+                   [&](const StartRollerRun& command) { startRollerRun(incoming, command); },
                    [&](const SetAudio& command) {
                        if (sound_ != nullptr) {
                            sound_->setOutput(command.volume, command.muted);
@@ -126,7 +148,7 @@ void SimulationService::applyCells(const IncomingCommand& incoming, const SetTab
 }
 
 const Table2D* SimulationService::findTable(const std::string& tableId) const {
-    const Tune& tune = simulation_.ecu().tune();
+    const Tune& tune = car_.engine().ecu().tune();
     if (tableId == "ve") {
         return &tune.ve;
     }
@@ -137,7 +159,7 @@ const Table2D* SimulationService::findTable(const std::string& tableId) const {
         return &tune.ignition;
     }
     if (tableId == "ignitionMbt") {
-        return &simulation_.definition().tables.ignitionMbt;
+        return &car_.engine().definition().tables.ignitionMbt;
     }
     return nullptr;
 }
@@ -148,7 +170,7 @@ Table2D* SimulationService::findEditableTable(const std::string& tableId) {
     if (descriptor == tables_.end() || !descriptor->editable) {
         return nullptr;
     }
-    Tune& tune = simulation_.ecu().tune(); // only the ECU tune is editable
+    Tune& tune = car_.engine().ecu().tune(); // only the ECU tune is editable
     if (tableId == "ve") {
         return &tune.ve;
     }
@@ -161,33 +183,70 @@ Table2D* SimulationService::findEditableTable(const std::string& tableId) {
     return nullptr;
 }
 
-void SimulationService::advance() {
-    // On the engine dyno the brake holds the speed, so a 2-step makes no sense there.
-    simulation_.ecu().setLaunchSwitch(launchSwitch_ && !sweep_);
-    if (!sweep_) {
-        publish(simulation_.step(pedal_, 0.0)); // free running, no brake
+void SimulationService::startRollerRun(const IncomingCommand& incoming,
+                                       const StartRollerRun& command) {
+    if (sweep_ || roller_) {
+        reply(incoming, ErrorReply{"a dyno run is in progress"});
         return;
     }
-    publish(sweep_->step(simulation_));
-    const auto progressSteps = std::lround(kProgressInterval_s / simulation_.timeStep_s());
-    if (++stepsSinceProgress_ >= progressSteps) {
+    try {
+        roller_.emplace(command.parameters, car_);
         stepsSinceProgress_ = 0;
-        publisher_.send({"", "", DynoProgress{sweep_->progress(), sweep_->setpoint_rpm()}});
-    }
-    if (sweep_->finished()) {
-        publisher_.send({"", "", DynoResult{sweep_->samples()}});
-        sweep_.reset();
+        reply(incoming, Ack{});
+    } catch (const std::invalid_argument& error) {
+        reply(incoming, ErrorReply{error.what()});
     }
 }
 
-void SimulationService::publish(const SimulationState& state) {
+void SimulationService::advance() {
+    if (sweep_) {
+        // Engine dyno: the brake holds the speed, so no 2-step and no shift cut there.
+        EngineSimulation& engine = car_.engine();
+        engine.ecu().setLaunchSwitch(false);
+        engine.ecu().setShiftCutRequest(false);
+        publish(sweep_->step(engine), car_.drivetrain().state());
+        sendProgress(sweep_->progress(), sweep_->setpoint_rpm());
+        if (sweep_->finished()) {
+            publisher_.send({"", "", DynoResult{sweep_->samples()}});
+            sweep_.reset();
+        }
+        return;
+    }
+    if (roller_) {
+        const CarState state = roller_->step(car_);
+        publish(state.engine, state.drivetrain);
+        sendProgress(roller_->progress(), roller_->currentRpm());
+        if (roller_->finished()) {
+            const int gear = roller_->gear();
+            publisher_.send(
+                {"", "",
+                 RollerResult{gear, car_.engine().definition().drivetrain.overallRatio(gear),
+                              roller_->samples()}});
+            roller_.reset();
+        }
+        return;
+    }
+    car_.setLaunchButton(launchSwitch_);
+    const CarState state = car_.step(pedal_); // driving on the roller dyno (or in neutral)
+    publish(state.engine, state.drivetrain);
+}
+
+void SimulationService::sendProgress(double progress, double rpm) {
+    const auto progressSteps = std::lround(kProgressInterval_s / car_.engine().timeStep_s());
+    if (++stepsSinceProgress_ >= progressSteps) {
+        stepsSinceProgress_ = 0;
+        publisher_.send({"", "", DynoProgress{progress, rpm}});
+    }
+}
+
+void SimulationService::publish(const SimulationState& state, const DrivetrainState& drivetrain) {
     if (sound_ != nullptr) {
-        sound_->publish(acousticParams(state, simulation_.definition()));
+        sound_->publish(acousticParams(state, car_.engine().definition()));
     }
     StateSnapshot snapshot;
     snapshot.time_s = state.time_s;
     snapshot.speed_rad_s = state.speed_rad_s;
-    snapshot.pedal = sweep_ ? sweep_->throttle() : pedal_;
+    snapshot.pedal = sweep_ ? sweep_->throttle() : (roller_ ? 1.0 : pedal_);
     snapshot.manifoldPressure_Pa = state.manifoldPressure_Pa;
     snapshot.lambdaActual = state.engine.lambdaActual;
     snapshot.lambdaTarget = state.command.lambdaTarget;
@@ -197,14 +256,20 @@ void SimulationService::publish(const SimulationState& state) {
     snapshot.airMassFlow_kg_s = state.engine.airMassFlow_kg_s;
     snapshot.fuelMassFlow_kg_s = state.engine.fuelMassFlow_kg_s;
     snapshot.exhaustTemperature_K = state.engine.exhaustTemperature_K;
-    snapshot.dynoMode = sweep_ ? DynoMode::Sweep : DynoMode::Free;
+    snapshot.dynoMode = sweep_ ? DynoMode::Sweep : (roller_ ? DynoMode::Roller : DynoMode::Free);
     snapshot.sweepProgress = sweep_ ? sweep_->progress() : 0.0;
     snapshot.fuelCut = state.command.fuelCut;
     snapshot.overrunFueling = state.command.overrunFueling;
     snapshot.catalystTemperature_K = state.catalystTemperature_K;
-    snapshot.launchSwitch = simulation_.ecu().launchSwitch();
+    snapshot.launchSwitch = car_.engine().ecu().launchSwitch();
     snapshot.launchActive = state.command.launchActive;
     snapshot.sparkCut = state.command.sparkCut;
+    snapshot.gear = drivetrain.gear;
+    snapshot.clutchEngagement = drivetrain.clutchEngagement;
+    snapshot.vehicleSpeed_m_s = drivetrain.vehicleSpeed_m_s;
+    snapshot.wheelTorque_Nm = drivetrain.wheelTorque_Nm;
+    snapshot.clutchLocked = drivetrain.clutchState == ClutchState::Locked;
+    snapshot.shifting = drivetrain.shifting;
     publisher_.publishState(snapshot);
 }
 

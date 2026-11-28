@@ -68,6 +68,7 @@ class EngineSimulation:
         self._manifold_pressure_pa = AMBIENT_PRESSURE_PA
         self._manifold_temperature_k = AMBIENT_TEMPERATURE_K
         self._catalyst_temperature_k = definition.afterburn.catalyst_initial_k
+        self._pending: tuple[float, EcuCommand, EngineOutputs] | None = None
 
     @property
     def time_step_s(self) -> float:
@@ -87,6 +88,15 @@ class EngineSimulation:
 
     def step(self, throttle: float, load_torque_nm: float) -> SimulationState:
         """Advances the simulation by one time step."""
+        self.prepare(throttle)
+        return self.finish(load_torque_nm)
+
+    def prepare(self, throttle: float) -> EngineOutputs:
+        """First half of a step: ECU, manifold and engine torque at the current speed.
+
+        The drivetrain needs the engine torque before it can tell the load torque (clutch),
+        so a step can be split: prepare(throttle), then finish(load_torque_nm).
+        """
         dt = self._time_step_s
         command = self._ecu.update(
             self._speed_rad_s, self._manifold_pressure_pa, self._manifold_temperature_k, throttle
@@ -102,6 +112,16 @@ class EngineSimulation:
                 spark_cut=command.spark_cut,
             )
         )
+        self._pending = (throttle, command, outputs)
+        return outputs
+
+    def finish(self, load_torque_nm: float) -> SimulationState:
+        """Second half of a step: crank speed and catalyst with the given load torque."""
+        if self._pending is None:
+            raise RuntimeError("call prepare() before finish()")
+        throttle, command, outputs = self._pending
+        self._pending = None
+        dt = self._time_step_s
         # Semi-implicit Euler for the crank: new speed from the current torque balance.
         acceleration = (outputs.brake_torque_nm - load_torque_nm) / self._definition.inertia_kg_m2
         self._speed_rad_s = max(0.0, self._speed_rad_s + dt * acceleration)
@@ -117,6 +137,14 @@ class EngineSimulation:
             engine=outputs,
             catalyst_temperature_k=self._catalyst_temperature_k,
         )
+
+    def set_speed_rad_s(self, speed_rad_s: float) -> None:
+        """Sets the crank speed, e.g. when the clutch locks or the starter restarts the engine."""
+        self._speed_rad_s = max(0.0, speed_rad_s)
+
+    def set_shift_cut_request(self, requested: bool) -> None:
+        """The gearbox is shifting (torque interruption): flat shift may cut the spark."""
+        self._ecu.set_shift_cut_request(requested)
 
     def _update_catalyst(self, outputs: EngineOutputs, dt: float) -> None:
         """First-order lag towards exhaust temperature plus afterburn (research.md §2.10a)."""

@@ -237,7 +237,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 | 10a | Protokoll-Vertrag und vereinbarte State-Felder (Vorbereitung 8/10) | P2 | – | ✅ |
 | 8 | Turbo + Klopfen + Turbo-Sound | P2 | Regelungstechnik | ⬜ |
 | 9 | Kompressor/Supercharger | P2 | – | ⬜ |
-| 10 | Antriebsstrang, Rollenprüfstand, Launch/Flat Shift/Pops | P3 | – | ⬜ |
+| 10 | Antriebsstrang, Rollenprüfstand, Launch/Flat Shift/Pops | P3 | – | ✅ |
 | 11 | Zylinderaufgelöstes 0D-Modell (Sound v2) | P1 | Thermodynamik | 🟨 |
 | 12 | Tauri-Desktop-App | P3 | Tauri/Rust-Basis | 🟨 |
 | 13 | 3D-Kennfeld, 3D-Auto, .msq-Import, Presets | P4 | three.js | 🟨 |
@@ -343,6 +343,7 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - ECU: Launch Control, Flat Shift (Zündunterbrechung). (Pops & Bangs im Schub: erledigt in 7b, hier ggf. als Tabelle über der Drehzahl.)
 - Sound: Drehzahlabfall beim Schalten, Fehlzündungen.
 **Abnahme:** Durchzug im 4. Gang auf der Rolle; Launch und Flat Shift hörbar.
+**Umgesetzt (2026-11-28):** ADR 0015, research.md §8.5. Lab `drivetrain.py`, `car.py`, `roller.py`; C++ `domain/drivetrain/` und `domain/dyno/roller` bitgenau (neue Golden Files `i6_30_na_roller.csv`, `i6_30_na_drive.csv`, alte unverändert). Kupplung als Zustandsautomat ohne Flattern, 6-Gang sequenziell mit automatischer Kupplung, Fahrzeug auf Rolle mit Fahrwiderstand, Abwürgen und Neustart, Launch über die Kupplung im Stand, Flat Shift im Tune (`launchSettings.flatShift`). Protokoll: `shift`, `setClutch`, `startRollerRun`, `dynoMode: roller`, `dynoResult.kind/gear`, `state.gear/clutch/vehicleSpeed_kmh/wheelTorque_Nm/clutchLocked/shifting`. UI: Panel «Gearbox · roller dyno» (E/Q schalten, C Kupplung), Rollenlauf im Dyno-Panel (Overlay mit dem Motorlauf), Flat-Shift-Schalter. Gemessen: 0–100 km/h 5,9 s, 4. Gang 175 kW Rad gegenüber 196 kW Motor, Schaltpause mit Flat Shift halb so laut wie das Hochdrehen ohne (`simcore --sound-drive`). 152 Lab-, 158 C++-, 234 UI-Tests, 5 End-to-End-Tests.
 
 ### Iteration 11 – Zylinderaufgelöstes 0D-Modell (Sound v2)
 - Pro Zylinder: Volumen über Kurbelwinkel, Wiebe-Brennverlauf, Druck/Temperatur, Ventilströmung, Auslassmassenstrom als Schallquelle.
@@ -399,6 +400,11 @@ Status: ⬜ offen · 🟨 in Arbeit · ✅ fertig. Claude aktualisiert die Spalt
 - Tauri: simcore-Adresse zur Laufzeit statt beim Build, Sidecar umbenennen (`/usr/bin/simcore`), CI-Job für `app/`, AppImage, Lizenzliste per `cargo about`
 - 0D: Ventildaten (`valves`) in die Motordatei, Woschni-Verbrennungsterm, Brenndauer-Tabelle
 - `core/tests/CMakeLists.txt` nennt `json_repository_test.cpp` doppelt
+- Flat Shift: Knaller in der Schaltpause sind leise (Spitzen ~0,1 gegenüber ~0,4 beim 2-Step), Nachverbrennungsstärke für kurze Zündunterbrechungen nachstimmen
+- Rollenlauf im 4. Gang dauert in Echtzeit ~37 s; optional ein Trägheits-Prüfstand ohne Fahrwiderstand (schneller) oder ein «Zeitraffer»
+- Höchster Gang in der UI fest auf 6 (`MAX_GEAR`); besser im `hello` mitschicken
+- Fake-Quelle: Antrieb nur angedeutet (kein Kupplungsschlupf, Rollenlauf = Motorkurve × η)
+- Fahrzeugdaten in eine eigene Datei `shared/vehicles/` auslagern, wenn es mehrere Autos gibt
 
 ---
 

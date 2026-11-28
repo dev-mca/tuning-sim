@@ -4,6 +4,7 @@
   "payload": {
     "enabled": false,
     "launch_rpm": 4000.0,
-    "retard_deg": 0.0
+    "retard_deg": 0.0,
+    "flatShift": false
   }
 }

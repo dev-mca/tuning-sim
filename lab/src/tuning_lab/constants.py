@@ -25,3 +25,6 @@ AMBIENT_TEMPERATURE_K = 298.15
 
 RADIANS_PER_CYCLE_4_STROKE = 4.0 * math.pi
 """One four-stroke cycle takes two revolutions = 4 pi rad (research.md §1.1)."""
+
+STANDARD_GRAVITY_M_S2 = 9.80665
+"""Standard acceleration of gravity g [m/s^2] (rolling resistance, research.md §8.2)."""

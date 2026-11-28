@@ -27,9 +27,11 @@
     "turboSpeed_rpm": null,
     "wastegateDuty_pct": null,
     "knockRetard_deg": 0.0,
-    "gear": null,
-    "clutch": null,
-    "vehicleSpeed_kmh": null,
-    "wheelTorque_Nm": null
+    "gear": 0,
+    "clutch": 1.0,
+    "vehicleSpeed_kmh": 0.0,
+    "wheelTorque_Nm": 0.0,
+    "clutchLocked": false,
+    "shifting": false
   }
 }

@@ -40,6 +40,23 @@
     "catalystTimeConstant_s": 10.0,
     "catalystInitial_C": 430.0
   },
+  "drivetrain": {
+    "_assumption": "Rear-wheel-drive saloon around the engine, research.md §8: 6-speed gearbox and final drive from §8.1, efficiency incl. differential, road load c_w*A and c_r from §8.2. The car stands on a road-load roller dyno that simulates its mass and road load (§8.4). Clutch capacity about 1.8x peak engine torque. Shift and clutch times are those of a quick driver with a sequential gearbox [prüfen].",
+    "gearRatios": [4.11, 2.32, 1.54, 1.18, 1.00, 0.85],
+    "finalDriveRatio": 3.15,
+    "efficiency": 0.90,
+    "wheelRadius_m": 0.32,
+    "vehicleMass_kg": 1550.0,
+    "wheelInertia_kg_m2": 5.0,
+    "dragArea_m2": 0.65,
+    "rollingResistance": 0.012,
+    "clutchMaxTorque_Nm": 550.0,
+    "clutchReleaseTime_s": 0.4,
+    "shiftTime_s": 0.15,
+    "shiftEngageTime_s": 0.15,
+    "launchMaxSpeed_kmh": 5.0,
+    "stallSpeed_rpm": 350.0
+  },
   "inertia_kg_m2": 0.20,
   "_assumption_inertia": "Crank train plus dual-mass flywheel, research.md §2.11 gives 0.15-0.25 kg m^2.",
   "intake": {

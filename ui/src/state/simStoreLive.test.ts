@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createTuneFile } from '../domain/tuneFile.ts';
 import type {
   ClientMessage,
+  EngineState,
   HelloPayload,
   ServerMessage,
   TableData,
@@ -223,6 +224,8 @@ describe('SimStore with a live source', () => {
     source.server({
       type: 'dynoResult',
       payload: {
+        kind: 'engine',
+        gear: null,
         rpm: [1000],
         torque_Nm: [250],
         power_kW: [26],
@@ -285,8 +288,8 @@ describe('SimStore overrun settings', () => {
 });
 
 describe('SimStore launch control', () => {
-  const stock = { enabled: false, launch_rpm: 4000, retard_deg: 0 };
-  const twoStep = { enabled: true, launch_rpm: 4000, retard_deg: 10 };
+  const stock = { enabled: false, launch_rpm: 4000, retard_deg: 0, flatShift: false };
+  const twoStep = { enabled: true, launch_rpm: 4000, retard_deg: 10, flatShift: false };
 
   it('asks for the settings after hello, changes them optimistically and reverts', () => {
     const { store, source } = connectedStore();
@@ -301,7 +304,7 @@ describe('SimStore launch control', () => {
 
   it('asks again when simcore rejects a change', () => {
     const { store, source } = connectedStore();
-    store.setLaunch({ enabled: true, launch_rpm: 9000, retard_deg: 10 });
+    store.setLaunch({ enabled: true, launch_rpm: 9000, retard_deg: 10, flatShift: false });
     const request = source.sentOfType('setLaunchSettings').at(-1);
     source.sent.length = 0;
     source.server({
@@ -333,5 +336,76 @@ describe('SimStore launch control', () => {
     source.server({ type: 'launchSettings', payload: stock });
     store.importTune(JSON.stringify(tune));
     expect(source.sentOfType('setLaunchSettings').at(-1)?.payload).toEqual(twoStep);
+  });
+});
+
+describe('SimStore drivetrain', () => {
+  function stateWith(gear: number, dynoMode: EngineState['dynoMode'] = 'free'): EngineState {
+    return {
+      t_s: 1,
+      rpm: 3000,
+      pedal: 0,
+      map_kPa: 50,
+      lambda: 1,
+      lambdaTarget: 1,
+      ignition_deg: 30,
+      torque_Nm: 50,
+      power_kW: 15,
+      airflow_kg_s: 0.03,
+      fuelflow_kg_s: 0.002,
+      egt_C: 600,
+      dynoMode,
+      sweepProgress: 0,
+      cutActive: false,
+      gear,
+    };
+  }
+
+  it('shifts up and down from the gear simcore reports, within 0..6', () => {
+    const { store, source } = connectedStore();
+    source.server({ type: 'state', payload: stateWith(2) });
+    store.shiftBy(1);
+    store.shiftBy(-1);
+    expect(source.sentOfType('shift').map((m) => m.payload.gear)).toEqual([3, 1]);
+    source.server({ type: 'state', payload: stateWith(0) });
+    store.shiftBy(-1); // no reverse gear
+    expect(source.sentOfType('shift')).toHaveLength(2);
+  });
+
+  it('sends the clutch pedal once per change and releases it after a reconnect', () => {
+    const { store, source } = connectedStore();
+    source.sent.length = 0;
+    store.setClutch(true);
+    store.setClutch(true);
+    expect(source.sentOfType('setClutch').map((m) => m.payload)).toEqual([{ pressed: true }]);
+    source.server({ type: 'hello', payload: HELLO });
+    expect(store.getSnapshot().clutchPressed).toBe(false);
+    expect(source.sentOfType('setClutch').at(-1)?.payload).toEqual({ pressed: false });
+  });
+
+  it('runs a roller run like a sweep and names the gear in the run', () => {
+    const { store, source } = connectedStore();
+    store.startRollerRun(4);
+    expect(source.sentOfType('startRollerRun').at(-1)?.payload).toEqual({ gear: 4 });
+    source.server({ type: 'state', payload: stateWith(4, 'roller') });
+    expect(store.getSnapshot().sweep.active).toBe(true);
+    source.server({
+      type: 'dynoResult',
+      payload: {
+        kind: 'roller',
+        gear: 4,
+        rpm: [1500],
+        torque_Nm: [240],
+        power_kW: [37],
+        lambda: [0.88],
+        map_kPa: [100],
+        ignition_deg: [12],
+        egt_C: [780],
+        airflow_kg_s: [0.03],
+      },
+    });
+    const run = store.getSnapshot().runs.at(-1);
+    expect(run?.label).toBe('Run 1 · roller 4th');
+    expect(store.getSnapshot().sweep.active).toBe(false);
   });
 });

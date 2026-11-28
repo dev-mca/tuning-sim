@@ -22,20 +22,32 @@ EngineSimulation::EngineSimulation(const EngineDefinition& definition, std::opti
       catalystTemperature_K_(definition.afterburn.catalystInitial_K) {}
 
 SimulationState EngineSimulation::step(double throttle, double loadTorque_Nm) noexcept {
+    static_cast<void>(prepare(throttle));
+    return finish(loadTorque_Nm);
+}
+
+const EngineOutputs& EngineSimulation::prepare(double throttle) noexcept {
     const double dt = timeStep_s_;
-    const EcuCommand command =
+    pendingThrottle_ = throttle;
+    pendingCommand_ =
         ecu_.update(speed_rad_s_, manifoldPressure_Pa_, manifoldTemperature_K_, throttle);
     integrateManifold(throttle, dt);
-    const EngineOutputs outputs =
-        model_.evaluate({speed_rad_s_, manifoldPressure_Pa_, manifoldTemperature_K_,
-                         command.fuelMassPerCycle_kg, command.ignition_deg, command.sparkCut});
+    pendingOutputs_ = model_.evaluate({speed_rad_s_, manifoldPressure_Pa_, manifoldTemperature_K_,
+                                       pendingCommand_.fuelMassPerCycle_kg,
+                                       pendingCommand_.ignition_deg, pendingCommand_.sparkCut});
+    return pendingOutputs_;
+}
+
+SimulationState EngineSimulation::finish(double loadTorque_Nm) noexcept {
+    const double dt = timeStep_s_;
     // Semi-implicit Euler: new speed from the current torque balance.
-    const double acceleration = (outputs.brakeTorque_Nm - loadTorque_Nm) / definition_.inertia_kgm2;
+    const double acceleration =
+        (pendingOutputs_.brakeTorque_Nm - loadTorque_Nm) / definition_.inertia_kgm2;
     speed_rad_s_ = std::max(0.0, speed_rad_s_ + dt * acceleration);
-    updateCatalyst(outputs, dt);
+    updateCatalyst(pendingOutputs_, dt);
     time_s_ += dt;
-    return {time_s_, speed_rad_s_, manifoldPressure_Pa_,  throttle, loadTorque_Nm,
-            command, outputs,      catalystTemperature_K_};
+    return {time_s_,       speed_rad_s_,    manifoldPressure_Pa_, pendingThrottle_,
+            loadTorque_Nm, pendingCommand_, pendingOutputs_,      catalystTemperature_K_};
 }
 
 void EngineSimulation::updateCatalyst(const EngineOutputs& outputs, double dt) noexcept {

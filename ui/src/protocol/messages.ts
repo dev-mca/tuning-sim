@@ -62,7 +62,8 @@ export interface HelloPayload {
   audio?: AudioInfo;
 }
 
-export type DynoMode = 'free' | 'sweep';
+/** free: no dyno run (engine free or driving on the rollers); sweep: engine dyno; roller: roller run. */
+export type DynoMode = 'free' | 'sweep' | 'roller';
 
 /** Engine state snapshot, sent at about 60 Hz. */
 export interface EngineState {
@@ -111,6 +112,10 @@ export interface EngineState {
   vehicleSpeed_kmh?: number | null;
   /** Torque at the driven wheels (iteration 10). */
   wheelTorque_Nm?: number | null;
+  /** Engine and car turn together (since iteration 10). */
+  clutchLocked?: boolean;
+  /** Torque interruption of a shift (since iteration 10). */
+  shifting?: boolean;
 }
 
 /** What the ECU does when the driver lifts off at speed (research.md §3.3). */
@@ -131,6 +136,8 @@ export interface LaunchSettings {
   launch_rpm: number;
   /** Ignition taken back from the map while the 2-step works. */
   retard_deg: number;
+  /** Cut the spark during an upshift at open throttle instead of flaring (iteration 10). */
+  flatShift: boolean;
 }
 
 export interface DynoProgressPayload {
@@ -140,6 +147,9 @@ export interface DynoProgressPayload {
 
 /** Result of a sweep: parallel arrays, one entry per 100 rpm. */
 export interface DynoResultPayload {
+  /** engine: engine dyno sweep; roller: roller run in `gear` (power at the wheels). */
+  kind: 'engine' | 'roller';
+  gear: number | null;
   rpm: number[];
   torque_Nm: number[];
   power_kW: number[];
@@ -187,6 +197,12 @@ export type ServerMessage =
   | OverrunSettingsMessage
   | LaunchSettingsMessage;
 
+export interface StartRollerRunPayload {
+  gear: number;
+  rpmFrom?: number;
+  rpmTo?: number;
+}
+
 export interface StartSweepPayload {
   rpmFrom: number;
   rpmTo: number;
@@ -206,7 +222,10 @@ export type ClientMessage =
   | Envelope<'setOverrunSettings', OverrunSettings>
   | Envelope<'getLaunchSettings', Record<string, never>>
   | Envelope<'setLaunchSettings', LaunchSettings>
-  | Envelope<'setLaunchSwitch', { held: boolean }>;
+  | Envelope<'setLaunchSwitch', { held: boolean }>
+  | Envelope<'shift', { gear: number }>
+  | Envelope<'setClutch', { pressed: boolean }>
+  | Envelope<'startRollerRun', StartRollerRunPayload>;
 
 /** Volume 0..1; mute keeps the volume for later. */
 export interface AudioSettings {

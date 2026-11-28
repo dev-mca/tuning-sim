@@ -238,3 +238,20 @@ TEST_CASE("a 2-step bangs at the launch speed, the stock limiter does not") {
     CHECK(*low >= -1.0F);
     CHECK(*high <= 1.0F);
 }
+
+TEST_CASE("flat shift is audible: the shift cut is quiet, a no-lift shift without it flares") {
+    const EngineDefinition& definition = test::referenceEngine().definition;
+    const LaunchSettings flat{true, units::rpmToRadS(4000.0), 10.0, true};
+    LaunchSettings plain = flat;
+    plain.flatShift = false;
+    const std::vector<float> withCut = left(renderDriveSound(definition, flat));
+    const std::vector<float> withoutCut = left(renderDriveSound(definition, plain));
+    // First upshift (1 -> 2) at 6500 1/min, about 5.27 s into the scenario
+    // (shared/golden/i6_30_na_drive.csv: flatShift = 1 at 5.30-5.40 s).
+    const std::vector<float> cutWindow = section(withCut, 5.30, 5.36);
+    const std::vector<float> flareWindow = section(withoutCut, 5.30, 5.36);
+    CHECK(rms(cutWindow) < 0.5 * rms(flareWindow));
+    const auto [low, high] = std::minmax_element(withCut.begin(), withCut.end());
+    CHECK(*low >= -1.0F);
+    CHECK(*high <= 1.0F);
+}
