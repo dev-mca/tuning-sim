@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Source for the app icons. Regenerate (from app/): npx tauri icon src-tauri/icons/icon.svg -o <tmp>,
+       then copy 32x32.png, 128x128.png, 128x128@2x.png and icon.png here (Linux needs no others). -->
+  <rect width="512" height="512" rx="96" fill="#14161b"/>
+  <path d="M96 336 A160 160 0 1 1 416 336" fill="none" stroke="#2f3440" stroke-width="40" stroke-linecap="round"/>
+  <path d="M96 336 A160 160 0 0 1 368 189" fill="none" stroke="#f97316" stroke-width="40" stroke-linecap="round"/>
+  <line x1="256" y1="336" x2="352" y2="216" stroke="#e5e7eb" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="256" cy="336" r="28" fill="#e5e7eb"/>
+</svg>
