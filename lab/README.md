@@ -31,6 +31,40 @@ python3 -m venv .venv
 | `dyno.py` | PI speed controller, `run_hold`, `run_sweep` with inertia correction | §2.12 |
 | `golden.py`, `report.py` | Golden CSV and plots | – |
 
+## 0D cylinder model (`src/tuning_lab/zero_d/`, iteration 11 prototype)
+
+Cylinder-resolved model over crank angle (research.md §7): slider-crank volume (§1.4), first law
+(§7.1), Wiebe heat release (§7.2), simplified Woschni wall heat (§7.3), isentropic valve flow
+(§7.4). Intake and exhaust are constant-pressure reservoirs; RK4 at a fixed crank-angle step
+(≤ 1°, ≤ 25 µs). Assumptions and the comparison with the MVM: `docs/adr/0010-zero-d-cylinder-model.md`.
+
+```bash
+.venv/bin/python -m tuning_lab.zero_d.report   # MVM vs 0D tables + plots -> lab/output/zero_d/
+```
+
+```python
+from tuning_lab import units
+from tuning_lab.zero_d.cylinder import ZeroDOperatingPoint
+from tuning_lab.zero_d.engine import run_operating_point
+from tuning_lab.zero_d.parameters import load_zero_d_engine
+
+engine = load_zero_d_engine()
+point = ZeroDOperatingPoint(
+    units.rpm_to_rad_s(3000.0), 100_000.0, ignition_deg=22.5, lambda_value=0.88
+)
+result = run_operating_point(engine, point)
+print(result.brake_torque_nm, result.volumetric_efficiency, result.cylinder.trace.pressure_pa.max())
+```
+
+| Module | Content |
+|---|---|
+| `parameters.py` | Loads conrod length and valve timing; assumed valve sizes, Wiebe and wall data |
+| `kinematics.py`, `gas.py` | V(θ), dV/dθ, wall area; u(T), h(T), γ(T) |
+| `valves.py`, `combustion.py`, `heat_transfer.py` | Lift and orifice flow, Wiebe, Woschni |
+| `cylinder.py` | Cycle integration until periodic; p-V trace, energy and mass integrals |
+| `engine.py` | IMEP, torque, VE, EGT, exhaust mass flow of all cylinders (sound source) |
+| `validation.py`, `report.py` | Comparison with the MVM at the same operating points, plots |
+
 ## Units
 
 SI inside (m, kg, s, Pa, K, rad/s). Exception: crank angles stay in degrees (`_deg`),
