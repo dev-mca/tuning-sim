@@ -23,6 +23,7 @@ export function DynoPanel() {
   const store = useStore();
   const [hoverRpm, setHoverRpm] = useState<number | null>(null);
   const [sweepRequest, setSweepRequest] = useState(DEFAULT_SWEEP);
+  const [rollerGear, setRollerGear] = useState(DEFAULT_ROLLER_GEAR);
   const revLimit = hello?.engine.revLimit_rpm ?? DEFAULT_SWEEP.rpmTo;
 
   const visible = useMemo(() => runs.filter((run) => run.visible), [runs]);
@@ -50,7 +51,7 @@ export function DynoPanel() {
   return (
     <Panel
       title="Dyno"
-      subtitle="Full-load sweep · torque and power over engine speed"
+      subtitle="Engine dyno sweep or roller run in a gear (power at the wheels)"
       actions={
         <SweepControls
           request={sweepRequest}
@@ -62,6 +63,11 @@ export function DynoPanel() {
           }}
           onStop={() => {
             store.stopSweep();
+          }}
+          rollerGear={rollerGear}
+          onRollerGearChange={setRollerGear}
+          onRoller={() => {
+            store.startRollerRun(rollerGear);
           }}
         />
       }
@@ -99,6 +105,10 @@ export function DynoPanel() {
   );
 }
 
+/** Roller runs from 1500 to 6800 1/min (simcore's default range, research.md §8.4). */
+const ROLLER_GEARS = [2, 3, 4, 5, 6] as const;
+const DEFAULT_ROLLER_GEAR = 4;
+
 interface SweepControlsProps {
   request: typeof DEFAULT_SWEEP;
   revLimit: number;
@@ -106,6 +116,9 @@ interface SweepControlsProps {
   onChange: (request: typeof DEFAULT_SWEEP) => void;
   onStart: () => void;
   onStop: () => void;
+  rollerGear: number;
+  onRollerGearChange: (gear: number) => void;
+  onRoller: () => void;
 }
 
 function SweepControls({
@@ -115,6 +128,9 @@ function SweepControls({
   onChange,
   onStart,
   onStop,
+  rollerGear,
+  onRollerGearChange,
+  onRoller,
 }: SweepControlsProps) {
   const field =
     'h-8 w-[4.5rem] rounded-md border border-line bg-canvas px-2 font-mono text-sm text-ink focus:border-accent focus:outline-none disabled:opacity-40';
@@ -178,6 +194,29 @@ function SweepControls({
           Start sweep
         </Button>
       )}
+      <span className="mx-1 h-5 w-px bg-line" aria-hidden="true" />
+      <select
+        aria-label="Roller gear"
+        value={rollerGear}
+        disabled={active}
+        className={`${field} w-auto`}
+        onChange={(event) => {
+          onRollerGearChange(Number(event.target.value));
+        }}
+      >
+        {ROLLER_GEARS.map((gear) => (
+          <option key={gear} value={gear}>
+            gear {gear}
+          </option>
+        ))}
+      </select>
+      <Button
+        disabled={active}
+        onClick={onRoller}
+        title="Full throttle in this gear on the roller dyno, 1500 to 6800 1/min: power at the wheels"
+      >
+        Roller run
+      </Button>
     </div>
   );
 }
